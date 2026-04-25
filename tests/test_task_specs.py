@@ -32,9 +32,13 @@ def test_non_breakfast_task_can_complete_without_disturbance_recovery_requiremen
 
 
 def test_openreward_splits_have_expected_task_counts():
-    assert len(list_openreward_tasks_for_split("train")) == 64
+    assert len(list_openreward_tasks_for_split("train")) == 19 * 4
     assert len(list_openreward_tasks_for_split("validation")) == 16
     assert len(list_openreward_tasks_for_split("test")) == 16
+    total = sum(
+        len(list_openreward_tasks_for_split(split)) for split in ("train", "validation", "test")
+    )
+    assert total > 100
 
 
 def test_humanoid_openreward_spec_has_enough_macro_budget_for_expert():

@@ -45,13 +45,65 @@ def asset_candidates_custom_data(candidates: tuple[str, ...]) -> str:
     return json.dumps(list(candidates))
 
 
+def _isaac_asset_root() -> str | None:
+    """Path or omniverse:// URL that prefixes `/Isaac/...` browser paths in running Kit."""
+    for mod_name, fn_name in (
+        ("isaacsim.core.utils.nucleus", "get_assets_root_path"),
+        ("isaacsim.storage.native", "get_assets_root_path"),
+    ):
+        try:
+            mod = __import__(mod_name, fromlist=[fn_name])  # type: ignore[no-untyped-call]
+            get_root = getattr(mod, fn_name)
+            root = get_root()
+            if root:
+                return str(root).rstrip("/")
+        except Exception:
+            pass
+    return None
+
+
+def _pick_usd_reference(
+    candidates: tuple[str, ...],
+    *,
+    label: str,
+    prefer_env_override: str | None = "ROBOCEREBRA_HUMANOID_USD",
+) -> str:
+    """
+    Pick a single path for `AddReference`. Prepends Isaac asset root to `/Isaac/...` so
+    the robot actually loads in Kit (raw `/Isaac/...` often resolves to nothing in Docker).
+    """
+    if prefer_env_override:
+        ovr = os.environ.get(prefer_env_override, "").strip()
+        if ovr:
+            p = Path(ovr)
+            if p.is_file():
+                print(f"[replay] {label} using {prefer_env_override}={p.resolve()}", flush=True)
+                return str(p.resolve())
+            print(f"[replay] WARNING: {prefer_env_override} is not a file (ignored): {ovr!r}", flush=True)
+    base = _isaac_asset_root()
+    if base:
+        print(f"[replay] Isaac asset root: {base!r}", flush=True)
+    else:
+        print("[replay] WARNING: get_assets_root_path() unavailable; /Isaac/... references may not load.", flush=True)
+    for raw in candidates:
+        if not raw:
+            continue
+        if raw.startswith("/Isaac/") and base:
+            resolved = f"{base}{raw}"
+        else:
+            resolved = raw
+        print(f"[replay] {label} AddReference: {raw!r} -> {resolved!r}", flush=True)
+        return resolved
+    return ""
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Replay RoboCerebra traces in Isaac Sim.")
     parser.add_argument("--baseline-trace", type=Path, required=True)
     parser.add_argument("--trained-trace", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--headless", action="store_true", default=True)
-    parser.add_argument("--humanoid-showcase", action="store_true", help="Force the H1/Humanoid long-horizon replay scene.")
+    parser.add_argument("--humanoid-showcase", action="store_true", help="Force the Unitree G1 humanoid long-horizon replay scene.")
     args = parser.parse_args()
 
     try:
@@ -205,14 +257,18 @@ def _add_asset_reference(
     candidates: tuple[str, ...],
     translate: tuple[float, float, float],
     scale: tuple[float, float, float],
+    *,
+    ref_label: str = "asset",
+    prefer_env_override: str | None = None,
 ):
     from pxr import Gf, UsdGeom  # type: ignore[import-not-found]
 
     prim = stage.DefinePrim(path, "Xform")
     prim.SetCustomDataByKey("fallback", "Colored proxy geometry is shown if referenced Isaac assets do not resolve.")
     prim.SetCustomDataByKey("asset_candidates_json", asset_candidates_custom_data(candidates))
-    if candidates:
-        prim.GetReferences().AddReference(candidates[0])
+    ref = _pick_usd_reference(candidates, label=ref_label, prefer_env_override=prefer_env_override)
+    if ref:
+        prim.GetReferences().AddReference(ref)
     xformable = UsdGeom.Xformable(prim)
     xformable.AddTranslateOp().Set(Gf.Vec3d(*translate))
     xformable.AddScaleOp().Set(Gf.Vec3f(*scale))
@@ -277,6 +333,8 @@ def _write_humanoid_actor(
         scene_plan.humanoid_asset_candidates,
         (-1.9, y_offset, 0.85),
         scale,
+        ref_label="humanoid (G1)",
+        prefer_env_override="ROBOCEREBRA_HUMANOID_USD",
     )
     proxy_prims: list[object] = []
     if use_proxy:
@@ -344,6 +402,7 @@ def _write_lane(stage, root: str, actions: list[str], lane, materials: dict[str,
         ISAAC_ASSET_CANDIDATES["mobile_base"],
         (-1.3, y_offset, 0.18),
         (0.25, 0.25, 0.25),
+        ref_label="mobile_base",
     )
     mast = _add_cube(stage, f"{root}/SensorMast", (-1.3, y_offset, 0.48), (0.05, 0.05, 0.25), materials["object_white"])
     arm = _add_cube(stage, f"{root}/ManipulatorArm", (-1.2, y_offset, 0.62), (0.18, 0.035, 0.035), materials[lane.robot_color])
@@ -353,6 +412,7 @@ def _write_lane(stage, root: str, actions: list[str], lane, materials: dict[str,
         ISAAC_ASSET_CANDIDATES["manipulator"],
         (-1.2, y_offset, 0.62),
         (0.12, 0.12, 0.12),
+        ref_label="manipulator",
     )
     gripper = _add_cube(stage, f"{root}/Gripper", (-1.05, y_offset, 0.58), (0.055, 0.08, 0.025), materials["object_white"])
     mug = _add_cube(stage, f"{root}/Mug", (-1.35, y_offset - 0.18, 0.58), (0.055, 0.055, 0.09), materials["robot_blue"])

@@ -4,6 +4,11 @@ This repo already runs locally as an OpenReward/ORS environment. Hosted
 OpenReward deployment works by connecting the GitHub repo to an OpenReward
 environment.
 
+Task counts in the OpenReward UI come from the deployed image’s
+`list_tasks` implementation. After you change splits or seeds, **push to the
+linked GitHub branch and wait for the deployment to rebuild**; until then the
+dashboard may still show an older total (for example only a handful of tasks).
+
 ## Local API Smoke Test
 
 Start the server:

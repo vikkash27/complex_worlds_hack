@@ -63,7 +63,8 @@ Core tools:
 
 ## Benchmark Task
 
-The OpenReward splits ship **64 train, 16 validation, and 16 test** tasks. Each
+The OpenReward splits ship **76 train, 16 validation, and 16 test** tasks (**108**
+total: four task families × curated seeds). Each
 split cycles four embodied families (breakfast tray, spill recovery, countertop
 cleanup, and a 30-stage humanoid hospitality chain) over fixed seed grids so
 hosted sessions, local training, and `scripts/benchmark_openreward.py` share the

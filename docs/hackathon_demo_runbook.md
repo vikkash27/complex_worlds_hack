@@ -82,12 +82,20 @@ copied into the repo volume. Block “mocap” proxies are off by default; set
 `ROBOCEREBRA_HUMANOID_PROXY=1` only for debugging.
 
 ```bash
-docker exec -it isaac-sim bash -lc 'cd /workspace/complex_worlds_hack && /isaac-sim/python.sh scripts/isaac/replay_breakfast_tray.py \
+docker exec -it isaac-sim bash -lc 'bash /workspace/complex_worlds_hack/scripts/isaac/run_humanoid_replay_in_container.sh'
+```
+
+Or the same command written out in full (do **not** replace any line with `...`):
+
+```bash
+docker exec -it isaac-sim bash -lc 'cd /workspace/complex_worlds_hack && /isaac-sim/python.sh -u scripts/isaac/replay_breakfast_tray.py \
   --baseline-trace artifacts/traces/humanoid_baseline_long_horizon.jsonl \
   --trained-trace artifacts/traces/humanoid_trained_long_horizon.jsonl \
   --output-dir artifacts/isaac \
   --humanoid-showcase'
 ```
+
+The replay prepends `get_assets_root_path()` to `/Isaac/...` so the G1 USD actually loads in Kit; a bare `AddReference("/Isaac/...")` often shows nothing. Watch for log lines like `[replay] Isaac asset root: ...` and `humanoid (G1) AddReference: ... -> ...`.
 
 Then in the streamed Isaac UI:
 

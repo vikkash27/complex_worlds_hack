@@ -386,11 +386,12 @@ def iter_policy_actions(policy: str | Iterable[str] | object, world: BreakfastTr
     return actions[index]
 
 
-# Canonical task order for OpenReward splits (train 64 / validation 16 / test 16).
+# Canonical task order for OpenReward splits (four task families × seeds per split).
+# Total task count = len(OPENREWARD_TASK_ORDER) * sum(len(seeds per split)); kept > 100 for leaderboard UI.
 OPENREWARD_TASK_ORDER: tuple[str, ...] = tuple(TASK_LIBRARY.keys())
 
 OPENREWARD_SPLIT_SEEDS: dict[str, tuple[int, ...]] = {
-    "train": tuple(range(1, 17)),
+    "train": tuple(range(1, 20)),  # 19 seeds × 4 tasks = 76
     "validation": tuple(range(1001, 1005)),
     "test": tuple(range(1005, 1009)),
 }
