@@ -50,10 +50,12 @@ git clone https://github.com/vikkash27/complex_worlds_hack.git
 cd complex_worlds_hack
 ```
 
-Install and regenerate artifacts (use **Python 3.11+** and upgrade pip first; on stock Ubuntu, `bash scripts/bootstrap_dev_env.sh` does both):
+Install and regenerate artifacts. **Ubuntu’s default `python3` is often 3.10**; you must have **`python3.11`** on the PATH, then run the bootstrap (it will remove a stale 3.10 `.venv` automatically):
 
 ```bash
-bash scripts/bootstrap_dev_env.sh
+sudo apt-get update
+sudo apt-get install -y python3.11 python3.11-venv
+bash scripts/bootstrap_dev_env.sh python3.11
 .venv/bin/python scripts/run_demo.py
 .venv/bin/python scripts/build_visual_report.py
 .venv/bin/python scripts/build_side_by_side.py

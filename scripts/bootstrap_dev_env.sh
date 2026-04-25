@@ -6,14 +6,21 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 PREFERRED="${1:-python3.11}"
-if command -v "$PREFERRED" >/dev/null 2>&1; then
-  BASE_PY="$PREFERRED"
-else
-  echo "No $PREFERRED; using python3. Install Python 3.11+ (pyproject requires-python >=3.11)." >&2
-  BASE_PY="python3"
+if ! command -v "$PREFERRED" >/dev/null 2>&1; then
+  echo "Error: $PREFERRED not found. This project needs Python 3.11+ (see pyproject requires-python >=3.11)." >&2
+  echo "On Ubuntu, install then re-run, e.g.:" >&2
+  echo "  sudo apt-get update && sudo apt-get install -y ${PREFERRED} ${PREFERRED}-venv" >&2
+  echo "  rm -rf .venv" >&2
+  echo "  $0 ${PREFERRED}" >&2
+  exit 1
 fi
-
+BASE_PY="$PREFERRED"
 "$BASE_PY" -c 'import sys; v=sys.version_info; assert (v.major, v.minor) >= (3, 11), f"Need Python 3.11+, got {v.major}.{v.minor}"'
+
+if [ -d .venv ] && ! .venv/bin/python -c "import sys; assert sys.version_info >= (3, 11)" 2>/dev/null; then
+  echo "Removing .venv: it was not created with Python 3.11+ (required for robocerebra-rl / pyproject)." >&2
+  rm -rf .venv
+fi
 
 "$BASE_PY" -m pip install -U "pip>=24" setuptools wheel
 "$BASE_PY" -m venv .venv
