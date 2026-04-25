@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoboCerebra Reward Lab Demo</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f7f7f5; color: #171717; }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 56px; }
+    h1 { font-size: 30px; margin-bottom: 6px; }
+    h2 { margin-top: 34px; }
+    .subtitle { color: #555; margin-top: 0; max-width: 820px; line-height: 1.5; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 24px 0; }
+    .stat { background: white; border: 1px solid #d9d9d4; border-radius: 12px; padding: 18px; }
+    .stat strong { display: block; font-size: 28px; margin-bottom: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .panel { background: white; border: 1px solid #d9d9d4; border-radius: 12px; padding: 18px; }
+    img { max-width: 100%; border: 1px solid #d9d9d4; border-radius: 10px; background: white; }
+    code { background: #ececea; padding: 2px 5px; border-radius: 5px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #e3e3df; padding: 9px 7px; text-align: left; }
+    th { color: #555; font-weight: 600; }
+    @media (max-width: 800px) { .stats, .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>RoboCerebra Reward Lab</h1>
+  <p class="subtitle">Dense Gemini-style subgoal rewards turn a sparse 1000-tick physical-AI workflow into a learnable OpenReward benchmark. The trained macro-policy completes the breakfast-tray disturbance task while the random baseline stalls.</p>
+
+  <section class="stats">
+    <div class="stat"><strong>+0.733</strong><span>progress_lift</span></div>
+    <div class="stat"><strong>+1.000</strong><span>success_lift</span></div>
+    <div class="stat"><strong>+2.452</strong><span>reward_auc_lift</span></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Random Baseline</h2>
+      <p>Success rate: <strong>0.0%</strong><br />
+      Mean progress: <strong>26.7%</strong><br />
+      Disturbance recovery: <strong>1.7%</strong></p>
+      <img src="../replays/baseline_random.gif" alt="Random baseline replay" />
+    </div>
+    <div class="panel">
+      <h2>Dense Reward Policy</h2>
+      <p>Success rate: <strong>100.0%</strong><br />
+      Mean progress: <strong>100.0%</strong><br />
+      Disturbance recovery: <strong>100.0%</strong></p>
+      <img src="../replays/dense_trained.gif" alt="Dense trained replay" />
+    </div>
+  </section>
+
+  <h2>Training Curve</h2>
+  <img src="../plots/training_curve.png" alt="Training curve" />
+
+  <h2>Leaderboard JSON</h2>
+  <div class="panel">
+    <pre>{
+  &quot;benchmark&quot;: &quot;RoboCerebra Reward Lab&quot;,
+  &quot;dense_trained_policy&quot;: {
+    &quot;disturbance_recovery_rate&quot;: 1.0,
+    &quot;episodes&quot;: 60,
+    &quot;mean_progress&quot;: 1.0,
+    &quot;mean_reward&quot;: 3.4,
+    &quot;mean_ticks&quot;: 1001,
+    &quot;success_rate&quot;: 1.0
+  },
+  &quot;expert_oracle&quot;: {
+    &quot;disturbance_recovery_rate&quot;: 1.0,
+    &quot;episodes&quot;: 10,
+    &quot;mean_progress&quot;: 1.0,
+    &quot;mean_reward&quot;: 3.4,
+    &quot;mean_ticks&quot;: 1001,
+    &quot;success_rate&quot;: 1.0
+  },
+  &quot;headline&quot;: {
+    &quot;progress_lift&quot;: 0.733333,
+    &quot;reward_auc_lift&quot;: 2.452143,
+    &quot;success_lift&quot;: 1.0
+  },
+  &quot;horizon_ticks&quot;: 1000,
+  &quot;random_baseline&quot;: {
+    &quot;disturbance_recovery_rate&quot;: 0.016667,
+    &quot;episodes&quot;: 60,
+    &quot;mean_progress&quot;: 0.266667,
+    &quot;mean_reward&quot;: -0.328453,
+    &quot;mean_ticks&quot;: 2574,
+    &quot;success_rate&quot;: 0.0
+  },
+  &quot;sample_vlm_reward&quot;: {
+    &quot;confidence&quot;: 0.72,
+    &quot;irreversible_error&quot;: false,
+    &quot;progress_delta&quot;: 0.142857,
+    &quot;rationale&quot;: &quot;Cached symbolic fallback: progress is inferred from the simulator state because GEMINI_API_KEY is not configured.&quot;,
+    &quot;subgoal_complete&quot;: true
+  },
+  &quot;task&quot;: &quot;breakfast_tray_disturbance&quot;
+}</pre>
+  </div>
+</main>
+</body>
+</html>

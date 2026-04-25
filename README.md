@@ -27,6 +27,13 @@ The demo writes:
 - `artifacts/replays/baseline_random.gif`
 - `artifacts/replays/dense_trained.gif`
 
+Build a browser report from those artifacts:
+
+```bash
+.venv/bin/python scripts/build_visual_report.py
+open artifacts/visual_report/index.html
+```
+
 Set `GEMINI_API_KEY` or `GOOGLE_API_KEY` to use Gemini for reward scoring. Without
 an API key, the project uses a deterministic symbolic fallback and records that in
 the reward rationale so the demo remains runnable.
@@ -40,6 +47,10 @@ Run a local OpenReward-compatible server:
 ```bash
 .venv/bin/python -m robocerebra_rl.env
 ```
+
+This is an API server, not a browser UI. See
+`docs/openreward_deploy.md` for the correct session-header flow and hosted
+OpenReward deployment commands.
 
 Core tools:
 
@@ -89,6 +100,9 @@ videos that show recovery from non-stationary disturbances.”
 Use Brev/Isaac only after the core metrics are generated. The safe stretch is a
 visual replay, not training. If Isaac setup takes more than 45 minutes, preserve
 the benchmark story and submit the OpenReward environment plus metrics.
+
+For the safest cloud visualization path, serve `artifacts/visual_report` on Brev.
+See `docs/brev_visualization.md`.
 
 ## Limitations
 
