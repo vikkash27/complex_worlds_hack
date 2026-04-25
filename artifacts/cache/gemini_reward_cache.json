@@ -1,0 +1,9 @@
+{
+  "breakfast-tray-42|a4d7b7f27a0527e0|locate_items|locate_items": {
+    "confidence": 0.72,
+    "irreversible_error": false,
+    "progress_delta": 0.142857,
+    "rationale": "Cached symbolic fallback: progress is inferred from the simulator state because GEMINI_API_KEY is not configured.",
+    "subgoal_complete": true
+  }
+}

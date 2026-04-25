@@ -1,0 +1,16 @@
+{
+  "baseline_random": {
+    "disturbance_recovered": 0.0,
+    "progress": 0.142857,
+    "reward": -0.614286,
+    "success": 0.0,
+    "ticks": 2574.0
+  },
+  "dense_trained": {
+    "disturbance_recovered": 1.0,
+    "progress": 1.0,
+    "reward": 3.4,
+    "success": 1.0,
+    "ticks": 1001.0
+  }
+}

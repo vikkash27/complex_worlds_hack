@@ -1,0 +1,41 @@
+{
+  "benchmark": "RoboCerebra Reward Lab",
+  "dense_trained_policy": {
+    "disturbance_recovery_rate": 1.0,
+    "episodes": 60,
+    "mean_progress": 1.0,
+    "mean_reward": 3.4,
+    "mean_ticks": 1001,
+    "success_rate": 1.0
+  },
+  "expert_oracle": {
+    "disturbance_recovery_rate": 1.0,
+    "episodes": 10,
+    "mean_progress": 1.0,
+    "mean_reward": 3.4,
+    "mean_ticks": 1001,
+    "success_rate": 1.0
+  },
+  "headline": {
+    "progress_lift": 0.733333,
+    "reward_auc_lift": 2.452143,
+    "success_lift": 1.0
+  },
+  "horizon_ticks": 1000,
+  "random_baseline": {
+    "disturbance_recovery_rate": 0.016667,
+    "episodes": 60,
+    "mean_progress": 0.266667,
+    "mean_reward": -0.328453,
+    "mean_ticks": 2574,
+    "success_rate": 0.0
+  },
+  "sample_vlm_reward": {
+    "confidence": 0.72,
+    "irreversible_error": false,
+    "progress_delta": 0.142857,
+    "rationale": "Cached symbolic fallback: progress is inferred from the simulator state because GEMINI_API_KEY is not configured.",
+    "subgoal_complete": true
+  },
+  "task": "breakfast_tray_disturbance"
+}

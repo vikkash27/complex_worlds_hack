@@ -1,0 +1,8 @@
+{
+  "disturbance_recovery_rate": 1.0,
+  "episodes": 60,
+  "mean_progress": 1.0,
+  "mean_reward": 3.4,
+  "mean_ticks": 1001,
+  "success_rate": 1.0
+}
