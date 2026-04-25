@@ -17,6 +17,16 @@ SUBGOALS = [
     "deliver_tray",
 ]
 
+NOMINAL_SUBGOALS = [
+    "locate_items",
+    "clear_workspace",
+    "pick_mug",
+    "fill_drink",
+    "place_snack",
+]
+RECOVERY_TRIPLET = ["inspect_scene", "replan", "recover_disturbance"]
+FINAL_SUBGOAL = "deliver_tray"
+
 ACTIONS = [
     *SUBGOALS,
     "inspect_scene",
@@ -25,12 +35,36 @@ ACTIONS = [
 ]
 
 
+def build_tray_subgoals(disturbance_count: int) -> tuple[str, ...]:
+    sequence = list(NOMINAL_SUBGOALS)
+    for _ in range(max(disturbance_count, 0)):
+        sequence.extend(RECOVERY_TRIPLET)
+    if disturbance_count <= 0:
+        sequence.append("recover_disturbance")
+    sequence.append(FINAL_SUBGOAL)
+    return tuple(sequence)
+
+
+def build_episode_subgoals(
+    disturbances_per_tray: tuple[int, ...] | list[int],
+) -> tuple[tuple[str, ...], tuple[int, ...]]:
+    full: list[str] = []
+    boundaries: list[int] = []
+    for k in disturbances_per_tray:
+        tray_seq = build_tray_subgoals(int(k))
+        full.extend(tray_seq)
+        boundaries.append(len(full))
+    return tuple(full), tuple(boundaries)
+
+
 @dataclass(frozen=True)
 class TaskSpec:
     task_id: str
     instruction: str
     subgoals: tuple[str, ...] = tuple(SUBGOALS)
     horizon_ticks: int = 1000
+    tray_boundaries: tuple[int, ...] = (len(SUBGOALS),)
+    disturbances_per_tray: tuple[int, ...] = (1,)
 
 
 @dataclass(frozen=True)
@@ -89,6 +123,8 @@ class BreakfastTrayWorld:
     seed: int = 0
     horizon_ticks: int = 1000
     max_macro_steps: int = 18
+    tray_count: int = 1
+    disturbances_per_tray: tuple[int, ...] | None = None
     scene: SceneConfig = field(default_factory=SceneConfig)
     task: TaskSpec = field(init=False)
     ticks: int = field(init=False, default=0)
@@ -97,14 +133,27 @@ class BreakfastTrayWorld:
     success: bool = field(init=False, default=False)
     done: bool = field(init=False, default=False)
     disturbance_recovered: bool = field(init=False, default=False)
+    disturbances_recovered_total: int = field(init=False, default=0)
     inspected: bool = field(init=False, default=False)
     replanned: bool = field(init=False, default=False)
+    completed_trays: int = field(init=False, default=0)
     last_failure_reason: str | None = field(init=False, default=None)
     action_history: list[str] = field(init=False, default_factory=list)
     _rng: random.Random = field(init=False, repr=False)
+    _tray_boundaries: tuple[int, ...] = field(init=False, default=())
 
     def __post_init__(self) -> None:
         self._rng = random.Random(self.seed)
+        if self.disturbances_per_tray is None:
+            schedule: tuple[int, ...] = tuple([1] * self.tray_count)
+        else:
+            schedule = tuple(int(k) for k in self.disturbances_per_tray)
+            if len(schedule) != self.tray_count:
+                raise ValueError(
+                    f"disturbances_per_tray length {len(schedule)} != tray_count {self.tray_count}"
+                )
+        subgoals, boundaries = build_episode_subgoals(schedule)
+        self._tray_boundaries = boundaries
         self.task = TaskSpec(
             task_id=f"breakfast-tray-{self.seed}",
             instruction=(
@@ -112,7 +161,10 @@ class BreakfastTrayWorld:
                 "clear the workspace, fill the drink, recover from the tray bump, "
                 "and deliver without spilling."
             ),
+            subgoals=subgoals,
             horizon_ticks=self.horizon_ticks,
+            tray_boundaries=boundaries,
+            disturbances_per_tray=schedule,
         )
 
     @property
@@ -180,7 +232,20 @@ class BreakfastTrayWorld:
         self.ticks += self.macro_tick_size
         self.last_failure_reason = None
 
-        if action == "inspect_scene":
+        if action == expected and self._action_can_progress(action):
+            self.progress_index += 1
+            if action == "inspect_scene":
+                self.inspected = True
+            if action == "replan":
+                self.replanned = True
+            if action == "recover_disturbance":
+                self.disturbance_recovered = True
+                self.disturbances_recovered_total += 1
+            progress_delta = self.progress_fraction - before
+            recovery_bonus = 0.1 if action == "recover_disturbance" else 0.0
+            reward = 0.25 + progress_delta + recovery_bonus
+            self._maybe_cross_tray_boundary()
+        elif action == "inspect_scene":
             self.inspected = True
             progress_delta = 0.0
             reward = -0.01
@@ -188,18 +253,12 @@ class BreakfastTrayWorld:
             self.replanned = True
             progress_delta = 0.0
             reward = -0.01
-        elif action == expected and self._action_can_progress(action):
-            self.progress_index += 1
-            if action == "recover_disturbance":
-                self.disturbance_recovered = True
-            progress_delta = self.progress_fraction - before
-            reward = 0.25 + progress_delta + (0.1 if self.disturbance_recovered else 0.0)
         else:
             progress_delta = 0.0
             reward = -0.08
 
         if self.progress_index >= len(self.task.subgoals):
-            self.success = self.disturbance_recovered
+            self.success = self.disturbances_recovered_total >= sum(self.task.disturbances_per_tray)
             self.done = True
             self.ticks = max(self.ticks, self.horizon_ticks)
             reward += 1.0 if self.success else -0.5
@@ -208,6 +267,18 @@ class BreakfastTrayWorld:
             reward -= 0.25
 
         return self._transition(action, expected, progress_delta, reward)
+
+    def _maybe_cross_tray_boundary(self) -> None:
+        if not self._tray_boundaries:
+            return
+        if self.progress_index >= self._tray_boundaries[-1]:
+            return
+        if self.progress_index in self._tray_boundaries:
+            self.completed_trays += 1
+            self.disturbance_recovered = False
+            self.inspected = False
+            self.replanned = False
+            self.last_failure_reason = None
 
     def _action_can_progress(self, action: str) -> bool:
         if action == "locate_items" and self.scene.distractor_count > 0 and not self.inspected:

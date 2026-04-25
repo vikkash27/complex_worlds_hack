@@ -9,9 +9,9 @@
       "disturbance_recovery_rate": 1.0,
       "episodes": 60,
       "mean_progress": 1.0,
-      "mean_reward": 3.3,
-      "mean_ticks": 1287,
-      "mean_tool_calls": 9,
+      "mean_reward": 3.5,
+      "mean_ticks": 1120,
+      "mean_tool_calls": 10,
       "success_rate": 1.0,
       "success_rate_ci95": [
         1.0,
@@ -22,13 +22,13 @@
     "random_baseline": {
       "disturbance_recovery_ci95": [
         0.0,
-        0.049061
+        0.0
       ],
-      "disturbance_recovery_rate": 0.016667,
+      "disturbance_recovery_rate": 0.0,
       "episodes": 60,
-      "mean_progress": 0.266667,
-      "mean_reward": -0.328453,
-      "mean_ticks": 2574,
+      "mean_progress": 0.207407,
+      "mean_reward": -0.436667,
+      "mean_ticks": 2016,
       "mean_tool_calls": 18,
       "success_rate": 0.0,
       "success_rate_ci95": [
@@ -39,9 +39,9 @@
     }
   },
   "headline": {
-    "progress_lift": 0.544643,
-    "reward_auc_lift": 2.295714,
-    "success_lift": 0.7125
+    "progress_lift": 0.985445,
+    "reward_auc_lift": 35.299542,
+    "success_lift": 1.0
   },
   "randomized_heldout": {
     "dense_trained": {
@@ -51,13 +51,13 @@
       ],
       "disturbance_recovery_rate": 1.0,
       "episodes": 80,
-      "mean_progress": 0.998214,
-      "mean_reward": 3.164821,
-      "mean_ticks": 2015.4875,
-      "mean_tool_calls": 11.3125,
-      "success_rate": 0.9875,
+      "mean_progress": 1.0,
+      "mean_reward": 34.719372,
+      "mean_ticks": 7200.825,
+      "mean_tool_calls": 232.5875,
+      "success_rate": 1.0,
       "success_rate_ci95": [
-        0.963154,
+        1.0,
         1.0
       ],
       "task_regime": "randomized_heldout"
@@ -70,9 +70,9 @@
       "disturbance_recovery_rate": 1.0,
       "episodes": 80,
       "mean_progress": 1.0,
-      "mean_reward": 3.22125,
-      "mean_ticks": 1896.975,
-      "mean_tool_calls": 10.575,
+      "mean_reward": 35.113436,
+      "mean_ticks": 7044.75,
+      "mean_tool_calls": 227.3875,
       "success_rate": 1.0,
       "success_rate_ci95": [
         1.0,
@@ -88,9 +88,9 @@
       "disturbance_recovery_rate": 0.0,
       "episodes": 80,
       "mean_progress": 0.0,
-      "mean_reward": -0.9,
-      "mean_ticks": 3230.1,
-      "mean_tool_calls": 18,
+      "mean_reward": -12.639375,
+      "mean_ticks": 7832.6125,
+      "mean_tool_calls": 252.7875,
       "success_rate": 0.0,
       "success_rate_ci95": [
         0.0,
@@ -100,15 +100,15 @@
     },
     "random": {
       "disturbance_recovery_ci95": [
-        0.0,
-        0.0
+        0.032534,
+        0.162574
       ],
-      "disturbance_recovery_rate": 0.0,
+      "disturbance_recovery_rate": 0.097554,
       "episodes": 80,
-      "mean_progress": 0.141071,
-      "mean_reward": -0.605536,
-      "mean_ticks": 3230.1,
-      "mean_tool_calls": 18,
+      "mean_progress": 0.114707,
+      "mean_reward": -9.183136,
+      "mean_ticks": 7832.6125,
+      "mean_tool_calls": 252.7875,
       "success_rate": 0.0,
       "success_rate_ci95": [
         0.0,
@@ -118,19 +118,19 @@
     },
     "reactive_script": {
       "disturbance_recovery_ci95": [
-        0.177153,
-        0.372847
+        0.0,
+        0.0
       ],
-      "disturbance_recovery_rate": 0.275,
+      "disturbance_recovery_rate": 0.0,
       "episodes": 80,
-      "mean_progress": 0.453571,
-      "mean_reward": 0.639553,
-      "mean_ticks": 2801.4125,
-      "mean_tool_calls": 15.5875,
-      "success_rate": 0.275,
+      "mean_progress": 0.014555,
+      "mean_reward": -12.480643,
+      "mean_ticks": 7832.6125,
+      "mean_tool_calls": 252.7875,
+      "success_rate": 0.0,
       "success_rate_ci95": [
-        0.177153,
-        0.372847
+        0.0,
+        0.0
       ],
       "task_regime": "randomized_heldout"
     },
@@ -142,9 +142,9 @@
       "disturbance_recovery_rate": 0.0,
       "episodes": 80,
       "mean_progress": 0.0,
-      "mean_reward": -0.9,
-      "mean_ticks": 3222,
-      "mean_tool_calls": 18,
+      "mean_reward": -12.600625,
+      "mean_ticks": 7803.05,
+      "mean_tool_calls": 252.0125,
       "success_rate": 0.0,
       "success_rate_ci95": [
         0.0,
@@ -157,8 +157,8 @@
   "sample_vlm_reward": {
     "confidence": 0.72,
     "irreversible_error": false,
-    "progress_delta": 0.142857,
-    "rationale": "```json\n{\n  \"progress_delta\": 0.142857,\n  \"subgoal_complete\": false,\n  \"irreversible_error\": false,\n  \"confidence\": 1.0,\n  \"rationale\": \"The simulator reports a progress delta of 0.142857 for the 'locate_items' action within the 'locate_items' subgoal. This positive delta indicates partial progress,",
+    "progress_delta": 0.111111,
+    "rationale": "Cached symbolic fallback: progress is inferred from the simulator state because GEMINI_API_KEY is not configured.",
     "subgoal_complete": true
   },
   "task": "breakfast_tray_disturbance"

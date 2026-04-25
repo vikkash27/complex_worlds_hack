@@ -2,17 +2,17 @@
   "baseline_random": {
     "disturbance_recovered": 0.0,
     "progress": 0.0,
-    "reward": -1.5,
+    "reward": -11.95,
     "success": 0.0,
-    "ticks": 4290.0,
-    "tool_calls": 30.0
+    "ticks": 7170.0,
+    "tool_calls": 239.0
   },
   "dense_trained": {
     "disturbance_recovered": 1.0,
     "progress": 1.0,
-    "reward": 3.3,
+    "reward": 34.200003,
     "success": 1.0,
-    "ticks": 1287.0,
-    "tool_calls": 9.0
+    "ticks": 5730.0,
+    "tool_calls": 191.0
   }
 }

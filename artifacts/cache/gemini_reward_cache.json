@@ -12,5 +12,12 @@
     "progress_delta": 0.142857,
     "rationale": "Cached symbolic fallback: progress is inferred from the simulator state because GEMINI_API_KEY is not configured.",
     "subgoal_complete": true
+  },
+  "breakfast-tray-42|d2ac4a99b4ff78da|locate_items|locate_items": {
+    "confidence": 0.72,
+    "irreversible_error": false,
+    "progress_delta": 0.111111,
+    "rationale": "Cached symbolic fallback: progress is inferred from the simulator state because GEMINI_API_KEY is not configured.",
+    "subgoal_complete": true
   }
 }

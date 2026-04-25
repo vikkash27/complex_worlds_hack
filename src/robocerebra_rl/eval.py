@@ -10,6 +10,17 @@ from robocerebra_rl.rewards import symbolic_dense_reward
 from robocerebra_rl.world import BreakfastTrayWorld, SceneConfig, iter_policy_actions
 
 
+TRAY_COUNT = 5
+DISTURBANCE_RANGE = (8, 12)
+
+
+def _sample_disturbances(seed: int) -> tuple[int, ...]:
+    import random as _r
+    rng = _r.Random(seed * 7919 + 31)
+    lo, hi = DISTURBANCE_RANGE
+    return tuple(rng.randint(lo, hi) for _ in range(TRAY_COUNT))
+
+
 def randomized_world(seed: int) -> BreakfastTrayWorld:
     scene = SceneConfig.from_seed(seed)
     if seed >= 1000:
@@ -22,10 +33,15 @@ def randomized_world(seed: int) -> BreakfastTrayWorld:
             action_failure_prob=max(0.18, scene.action_failure_prob),
             disturbance_severity=max(0.7, scene.disturbance_severity),
         )
+    schedule = _sample_disturbances(seed)
+    nominal_calls = sum(6 + 3 * k for k in schedule)
+    horizon = 1000 * TRAY_COUNT + (seed % 3) * 500
     return BreakfastTrayWorld(
         seed=seed,
-        horizon_ticks=1000 + (seed % 3) * 250,
-        max_macro_steps=18 if seed >= 1000 else 30,
+        horizon_ticks=horizon,
+        max_macro_steps=int(nominal_calls * 1.4),
+        tray_count=TRAY_COUNT,
+        disturbances_per_tray=schedule,
         scene=scene,
     )
 
@@ -64,7 +80,8 @@ def evaluate_policy(
         progresses.append(world.progress_fraction)
         rewards.append(round(total_reward, 6))
         ticks.append(world.ticks)
-        recoveries.append(1.0 if world.disturbance_recovered else 0.0)
+        total_disturbances = sum(world.task.disturbances_per_tray) or 1
+        recoveries.append(round(world.disturbances_recovered_total / total_disturbances, 6))
         tool_calls.append(world.macro_steps)
 
     success_rate = round(mean(successes), 6)

@@ -21,9 +21,9 @@ class TabularPolicy:
         return max(ACTIONS, key=lambda action: values.get(action, 0.0))
 
 
-def policy_state(world: BreakfastTrayWorld) -> tuple[int, bool, bool, str]:
+def policy_state(world: BreakfastTrayWorld) -> tuple[str, bool, bool, str]:
     return (
-        world.progress_index,
+        world.expected_action,
         world.inspected,
         world.replanned,
         world.last_failure_reason or "",
