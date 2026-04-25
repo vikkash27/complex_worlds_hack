@@ -667,8 +667,8 @@
   }
 
   function updateUI() {
-    prevBtn.disabled = current === 0;
-    nextBtn.disabled = current === TOTAL - 1;
+    prevBtn.disabled = false;
+    nextBtn.disabled = false;
     document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
     progress.style.width = ((current + 1) / TOTAL * 100) + '%';
     numBadge.textContent = String(current + 1).padStart(2,'0') + ' / ' + String(TOTAL).padStart(2,'0');
@@ -693,7 +693,11 @@
     updateUI();
   }
 
-  function navigate(dir) { goTo(current + dir); }
+  function navigate(dir) {
+    let nextIndex = (current + dir) % TOTAL;
+    if (nextIndex < 0) nextIndex = TOTAL - 1;
+    goTo(nextIndex);
+  }
 
   document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
