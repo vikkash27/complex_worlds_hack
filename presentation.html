@@ -413,7 +413,7 @@
 <div class="grid-overlay"></div>
 
 <div class="progress-line" id="progressLine"></div>
-<div class="slide-num-badge" id="slideNumBadge">01 / 04</div>
+<div class="slide-num-badge" id="slideNumBadge">01 / 05</div>
 
 <div class="deck" id="deck">
 
@@ -615,8 +615,25 @@
     </div>
   </div><!-- /slide-3 -->
 
-  <!-- ══════ SLIDE 4 — RESEARCH PAPER ══════ -->
+  <!-- ══════ SLIDE 4 — SHOWCASE ══════ -->
   <div class="slide" id="slide-4">
+    <div class="slide-inner" style="max-width: 1000px; text-align: center;">
+      <div class="s-header">
+        <h2 class="s-title">Agent Showcase</h2>
+        <p class="s-subtitle" style="margin: 0 auto;">
+          Our trained policy executing OpenReward tool calls in real-time to complete the physical AI task without failure, rendered natively in <strong>NVIDIA Isaac Sim</strong>.
+        </p>
+      </div>
+      <div style="margin-top: 2rem; display: flex; justify-content: center; animation: fadeUp 0.6s ease-out 0.2s both;">
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+          <img src="g1_openreward_showcase.gif" alt="Showcase GIF" style="display: block; width: 100%; max-width: 800px; max-height: 55vh; object-fit: contain;" />
+        </div>
+      </div>
+    </div>
+  </div><!-- /slide-4 -->
+
+  <!-- ══════ SLIDE 5 — RESEARCH PAPER ══════ -->
+  <div class="slide" id="slide-5">
     <div class="slide-inner">
       <div class="s-header" style="text-align: center;">
         <span style="font-size: 3rem; margin-bottom: 1rem; display: inline-block;">📄</span>
@@ -636,7 +653,7 @@
         </a>
       </div>
     </div>
-  </div><!-- /slide-4 -->
+  </div><!-- /slide-5 -->
 
 </div><!-- /deck -->
 
@@ -649,7 +666,7 @@
 <div class="key-hint"><kbd>←</kbd> <kbd>→</kbd> to navigate</div>
 
 <script>
-  const TOTAL = 4;
+  const TOTAL = 5;
   let current = 0, animating = false;
 
   const slides   = document.querySelectorAll('.slide');
