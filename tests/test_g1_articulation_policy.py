@@ -1,6 +1,8 @@
 from robocerebra_rl.g1_articulation_policy import (
     G1JointTargets,
+    G1LinkPose,
     build_g1_policy_frame,
+    build_g1_visual_link_poses,
     classify_g1_joint,
     select_supported_g1_joints,
 )
@@ -68,3 +70,35 @@ def test_build_g1_policy_frame_produces_gesture_targets():
     assert grasp.frame == 24
     assert grasp.positions["right_shoulder_pitch_joint"] > walk.positions["right_shoulder_pitch_joint"]
     assert walk.positions["left_hip_pitch_joint"] == -walk.positions["right_hip_pitch_joint"]
+
+
+def test_build_g1_visual_link_poses_animates_unitree_link_names():
+    poses = build_g1_visual_link_poses(_segment("walk", frame=36))
+    by_name = {pose.link_name: pose for pose in poses}
+
+    assert isinstance(poses[0], G1LinkPose)
+    assert "left_hip_pitch_link" in by_name
+    assert "right_hip_pitch_link" in by_name
+    assert "left_shoulder_pitch_link" in by_name
+    assert "right_elbow_link" in by_name
+    assert by_name["left_hip_pitch_link"].rotate_xyz != by_name["right_hip_pitch_link"].rotate_xyz
+
+
+def test_build_g1_visual_link_poses_uses_arms_for_grasp_and_stall_for_failed_status():
+    grasp = {pose.link_name: pose for pose in build_g1_visual_link_poses(_segment("grasp"))}
+    stalled_segment = MotionSegment(
+        frame=24,
+        action="wait",
+        station="counter",
+        phase="scan",
+        gesture="stalled",
+        root_xyz=(-0.85, 0.0, 0.85),
+        left_hand_xyz=(-0.9, -0.18, 1.0),
+        right_hand_xyz=(-0.9, 0.18, 1.0),
+        caption="WAIT",
+        status="failed",
+    )
+    stalled = {pose.link_name: pose for pose in build_g1_visual_link_poses(stalled_segment)}
+
+    assert grasp["right_shoulder_pitch_link"].rotate_xyz[1] > 15
+    assert stalled["torso_link"].translate_xyz[2] < 0

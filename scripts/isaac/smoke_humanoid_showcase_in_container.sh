@@ -32,7 +32,10 @@ usd_text = usd_path.read_text(encoding="utf-8", errors="ignore")
 assert usd_path.is_file(), usd_path
 assert tool_calls >= 100, tool_calls
 assert asset and asset in usd_text, f"Expected local G1 reference {asset!r} in {usd_path}"
+assert "robocerebra_motion" in usd_text, "Expected G1 link-level motion overlays in exported USD"
+assert "xformOp:rotateXYZ:robocerebra" in usd_text, "Expected animated G1 link rotations in exported USD"
 print(f"[smoke] humanoid USD: {usd_path}")
 print(f"[smoke] tool calls: {tool_calls}")
 print(f"[smoke] local G1 reference: {asset}")
+print("[smoke] G1 link motion overlays: present")
 PY

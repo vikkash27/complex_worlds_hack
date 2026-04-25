@@ -43,3 +43,20 @@ the benchmark story:
 
 If Isaac setup works, describe it as a visualization stretch. The verifiable
 benchmark remains the OpenReward environment and its generated metrics.
+
+## Unitree G1 fetch: `Permission denied` under `artifacts/isaac/vendor`
+
+If `python scripts/isaac/fetch_unitree_g1_assets.py` fails with **Permission
+denied** when creating `artifacts/isaac/vendor`, the directory was often created
+**as root** inside the Isaac container. On the **Brev host** (not inside
+Docker), fix ownership or remove the tree, then fetch again:
+
+```bash
+cd ~/complex_worlds_hack
+sudo chown -R "$USER:$USER" artifacts/isaac
+# or: sudo rm -rf artifacts/isaac/vendor && mkdir -p artifacts/isaac/vendor/unitree
+.venv/bin/python scripts/isaac/fetch_unitree_g1_assets.py
+```
+
+Install **git-lfs** if the script warns about LFS pointers:
+`sudo apt-get update && sudo apt-get install -y git-lfs`.

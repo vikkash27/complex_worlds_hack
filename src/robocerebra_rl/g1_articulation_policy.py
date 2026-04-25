@@ -16,6 +16,13 @@ class G1JointTargets:
     positions: dict[str, float]
 
 
+@dataclass(frozen=True)
+class G1LinkPose:
+    link_name: str
+    rotate_xyz: tuple[float, float, float]
+    translate_xyz: tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+
 def classify_g1_joint(name: str) -> str | None:
     lowered = name.lower()
     if "left" in lowered and any(part in lowered for part in ("hip", "knee", "ankle")):
@@ -67,3 +74,32 @@ def build_g1_policy_frame(segment: MotionSegment, supported_joints: dict[str, li
         for name in names:
             positions[name] = round(value, 6)
     return G1JointTargets(frame=segment.frame, gesture=segment.gesture, positions=positions)
+
+
+def build_g1_visual_link_poses(segment: MotionSegment) -> list[G1LinkPose]:
+    phase = math.sin(segment.frame / 10.0)
+    walk = 18.0 * phase if segment.gesture == "walk" else 0.0
+    arm_reach = 28.0 if segment.gesture in {"grasp", "place", "handoff", "recover"} else 10.0 if segment.gesture in {"scan", "inspect"} else 0.0
+    elbow = 34.0 if segment.gesture in {"grasp", "place", "handoff", "recover"} else 8.0
+    torso_pitch = -10.0 if segment.status == "failed" else 8.0 if segment.gesture in {"grasp", "place"} else 0.0
+    torso_drop = -0.045 if segment.status == "failed" else 0.0
+    if segment.status == "recovery":
+        torso_pitch = 12.0
+        arm_reach = 34.0
+    return [
+        G1LinkPose("torso_link", (torso_pitch, 0.0, 0.0), (0.0, 0.0, torso_drop)),
+        G1LinkPose("left_hip_pitch_link", (0.0, -walk, 0.0)),
+        G1LinkPose("right_hip_pitch_link", (0.0, walk, 0.0)),
+        G1LinkPose("left_knee_link", (0.0, max(0.0, walk) * 0.65, 0.0)),
+        G1LinkPose("right_knee_link", (0.0, max(0.0, -walk) * 0.65, 0.0)),
+        G1LinkPose("left_ankle_pitch_link", (0.0, -walk * 0.25, 0.0)),
+        G1LinkPose("right_ankle_pitch_link", (0.0, walk * 0.25, 0.0)),
+        G1LinkPose("left_shoulder_pitch_link", (0.0, -arm_reach * 0.45, 0.0)),
+        G1LinkPose("right_shoulder_pitch_link", (0.0, arm_reach, 0.0)),
+        G1LinkPose("left_shoulder_roll_link", (8.0 if segment.gesture in {"scan", "inspect"} else 0.0, 0.0, 0.0)),
+        G1LinkPose("right_shoulder_roll_link", (-8.0 if segment.gesture in {"scan", "inspect"} else 0.0, 0.0, 0.0)),
+        G1LinkPose("left_elbow_link", (0.0, elbow * 0.45, 0.0)),
+        G1LinkPose("right_elbow_link", (0.0, elbow, 0.0)),
+        G1LinkPose("left_wrist_roll_link", (0.0, 0.0, -12.0 if segment.gesture in {"grasp", "place"} else 0.0)),
+        G1LinkPose("right_wrist_roll_link", (0.0, 0.0, 12.0 if segment.gesture in {"grasp", "place"} else 0.0)),
+    ]

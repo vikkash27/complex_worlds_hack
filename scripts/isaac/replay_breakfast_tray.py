@@ -18,7 +18,8 @@ from robocerebra_rl.isaac_scene import (
     make_humanoid_showcase_scene_plan,
     make_showcase_scene_plan,
 )
-from robocerebra_rl.humanoid_motion import compile_humanoid_motion, summarize_tool_trace
+from robocerebra_rl.g1_articulation_policy import build_g1_visual_link_poses
+from robocerebra_rl.humanoid_motion import MotionSegment, compile_humanoid_motion, lane_status_counts, summarize_tool_trace
 
 
 def load_actions(path: Path) -> list[str]:
@@ -257,6 +258,22 @@ def _add_cube(
     return cube
 
 
+def _add_sphere(
+    stage,
+    path: str,
+    translate: tuple[float, float, float],
+    radius: float,
+    material: object | None = None,
+):
+    from pxr import Gf, UsdGeom  # type: ignore[import-not-found]
+
+    sphere = UsdGeom.Sphere.Define(stage, path)
+    sphere.CreateRadiusAttr(radius)
+    sphere.AddTranslateOp().Set(Gf.Vec3d(*translate))
+    _bind_material(sphere.GetPrim(), material)
+    return sphere
+
+
 def _add_asset_reference(
     stage,
     path: str,
@@ -281,6 +298,48 @@ def _add_asset_reference(
     return xformable
 
 
+def _find_or_override_child_prim(stage, root: str, link_name: str):
+    candidates = (
+        f"{root}/HumanoidAsset/{link_name}",
+        f"{root}/HumanoidAsset/pelvis/{link_name}",
+        f"{root}/HumanoidAsset/torso_link/{link_name}",
+    )
+    for candidate in candidates:
+        prim = stage.GetPrimAtPath(candidate)
+        if prim.IsValid():
+            return prim
+    return stage.OverridePrim(candidates[0])
+
+
+def _get_or_add_xform_op(xformable, op_type: str):
+    for op in xformable.GetOrderedXformOps():
+        if op.GetOpName() == f"xformOp:{op_type}:robocerebra":
+            return op
+    if op_type == "translate":
+        return xformable.AddTranslateOp(opSuffix="robocerebra")
+    if op_type == "rotateXYZ":
+        return xformable.AddRotateXYZOp(opSuffix="robocerebra")
+    raise ValueError(op_type)
+
+
+def _animate_g1_visual_links(stage, root: str, segments: tuple[MotionSegment, ...] | list[MotionSegment]) -> None:
+    from pxr import Gf, UsdGeom  # type: ignore[import-not-found]
+
+    animated_links: dict[str, object] = {}
+    for segment in segments:
+        for pose in build_g1_visual_link_poses(segment):
+            prim = animated_links.get(pose.link_name)
+            if prim is None:
+                prim = _find_or_override_child_prim(stage, root, pose.link_name)
+                animated_links[pose.link_name] = prim
+            prim.SetCustomDataByKey("robocerebra_motion", "Tool-trace-driven pose overlay for hackathon replay.")
+            xformable = UsdGeom.Xformable(prim)
+            translate = _get_or_add_xform_op(xformable, "translate")
+            rotate = _get_or_add_xform_op(xformable, "rotateXYZ")
+            translate.Set(Gf.Vec3d(*pose.translate_xyz), segment.frame)
+            rotate.Set(Gf.Vec3f(*pose.rotate_xyz), segment.frame)
+
+
 def _write_showcase_stage(stage, scene_plan: ShowcaseScenePlan, materials: dict[str, object]) -> None:
     _add_cube(stage, "/World/Floor", (0.0, 0.0, -0.025), (3.2, 2.8, 0.025), materials["floor_dark"])
     for task in scene_plan.tasks:
@@ -297,8 +356,12 @@ def _write_humanoid_stage(stage, scene_plan: HumanoidShowcaseScenePlan, material
         _add_cube(stage, f"/World/Stations/{station}/Platform", (x, 0.15, 0.25), (0.36, 0.48, 0.06), materials["humanoid_silver"])
         _add_cube(stage, f"/World/Stations/{station}/Beacon", (x, -0.45, 0.62), (0.045, 0.045, 0.32), materials["warning_amber"])
     _write_humanoid_metrics(stage, scene_plan, materials)
-    _write_humanoid_actor(stage, "/World/BaselineHumanoid", scene_plan.baseline_events, -0.78, materials["baseline_red"], scene_plan)
-    _write_humanoid_actor(stage, "/World/TrainedHumanoid", scene_plan.trained_events, 0.78, materials["policy_blue"], scene_plan)
+    baseline_segments = compile_humanoid_motion(scene_plan.baseline_events)
+    trained_segments = compile_humanoid_motion(scene_plan.trained_events)
+    _write_lane_route(stage, "/World/BaselineRoute", baseline_segments, -0.78, materials["baseline_red"], materials)
+    _write_lane_route(stage, "/World/TrainedRoute", trained_segments, 0.78, materials["policy_blue"], materials)
+    _write_humanoid_actor(stage, "/World/BaselineHumanoid", baseline_segments, scene_plan.humanoid_asset_candidates, -0.78, materials["baseline_red"], materials)
+    _write_humanoid_actor(stage, "/World/TrainedHumanoid", trained_segments, scene_plan.humanoid_asset_candidates, 0.78, materials["policy_blue"], materials)
 
 
 def _write_humanoid_metrics(stage, scene_plan: HumanoidShowcaseScenePlan, materials: dict[str, object]) -> None:
@@ -323,6 +386,41 @@ def _write_humanoid_metrics(stage, scene_plan: HumanoidShowcaseScenePlan, materi
             _add_cube(stage, f"/World/Metrics/StationLoad/{station}", (x, -0.72, height), (0.04, 0.04, height), materials["success_green"])
 
 
+def _material_for_status(status: str, fallback: object, materials: dict[str, object]) -> object:
+    if status == "failed":
+        return materials["failure_red"]
+    if status == "recovery":
+        return materials["warning_amber"]
+    return fallback
+
+
+def _write_lane_route(
+    stage,
+    root: str,
+    segments: tuple[MotionSegment, ...] | list[MotionSegment],
+    y_offset: float,
+    lane_material: object,
+    materials: dict[str, object],
+) -> None:
+    stage.DefinePrim(root, "Xform").SetDisplayName("Baseline route" if y_offset < 0 else "Optimized route")
+    counts = lane_status_counts(segments)
+    _add_cube(stage, f"{root}/TotalSteps", (-2.0, y_offset, 0.12), (min(1.6, len(segments) / 24), 0.025, 0.035), lane_material)
+    _add_cube(stage, f"{root}/FailureCount", (-2.0, y_offset, 0.21), (0.08 * counts.get("failed", 0), 0.03, 0.04), materials["failure_red"])
+    _add_cube(stage, f"{root}/RecoveryCount", (-2.0, y_offset, 0.30), (0.08 * counts.get("recovery", 0), 0.03, 0.04), materials["warning_amber"])
+    for idx, segment in enumerate(segments):
+        x, _, _ = segment.root_xyz
+        offset = ((idx % 6) - 2.5) * 0.035
+        z = 0.16 + (idx // 6) * 0.028
+        material = _material_for_status(segment.status, lane_material, materials)
+        marker = _add_cube(stage, f"{root}/ToolCallMarkers/Call_{idx:03d}_{segment.status}", (x + offset, y_offset, z), (0.025, 0.025, 0.025), material)
+        marker.GetPrim().SetDisplayName(f"{idx + 1}: {segment.caption} [{segment.status}]")
+        if idx:
+            prev_x = segments[idx - 1].root_xyz[0]
+            mid_x = (prev_x + x) / 2
+            length = max(0.02, abs(x - prev_x) / 2)
+            _add_cube(stage, f"{root}/Connectors/Segment_{idx:03d}", (mid_x, y_offset, 0.07), (length, 0.008, 0.008), material)
+
+
 def _humanoid_root_scale() -> tuple[float, float, float]:
     """Uniform or XYZ scale for the referenced humanoid USD (G1 is authored near real-world size)."""
     raw = os.environ.get("ROBOCEREBRA_HUMANOID_SCALE", "1.0").strip()
@@ -340,10 +438,11 @@ def _humanoid_root_scale() -> tuple[float, float, float]:
 def _write_humanoid_actor(
     stage,
     root: str,
-    events: tuple[dict[str, object], ...],
+    segments: tuple[MotionSegment, ...] | list[MotionSegment],
+    asset_candidates: tuple[str, ...],
     y_offset: float,
     material: object,
-    scene_plan: HumanoidShowcaseScenePlan,
+    materials: dict[str, object],
 ) -> None:
     from pxr import Gf  # type: ignore[import-not-found]
 
@@ -359,12 +458,13 @@ def _write_humanoid_actor(
     humanoid_asset = _add_asset_reference(
         stage,
         f"{root}/HumanoidAsset",
-        scene_plan.humanoid_asset_candidates,
+        asset_candidates,
         (-1.9, y_offset, 0.85),
         scale,
         ref_label="humanoid (G1)",
         prefer_env_override="ROBOCEREBRA_HUMANOID_USD",
     )
+    _animate_g1_visual_links(stage, root, segments)
     proxy_prims: list[object] = []
     if use_proxy:
         proxy_prims = [
@@ -384,9 +484,24 @@ def _write_humanoid_actor(
     left_target = _add_cube(stage, f"{root}/LeftHandTarget", (-1.9, y_offset - 0.16, 1.12), (0.025, 0.025, 0.025), material)
     right_target = _add_cube(stage, f"{root}/RightHandTarget", (-1.9, y_offset + 0.16, 1.12), (0.025, 0.025, 0.025), material)
     tool_token = _add_cube(stage, f"{root}/ToolToken", (-1.9, y_offset, 0.98), (0.06, 0.035, 0.02), material)
-    for segment in compile_humanoid_motion(events):
+    torso_joint = _add_sphere(stage, f"{root}/MotionRig/Torso", (-1.9, y_offset, 1.06), 0.055, materials["motion_white"])
+    head_joint = _add_sphere(stage, f"{root}/MotionRig/Head", (-1.9, y_offset, 1.42), 0.05, material)
+    left_hand_joint = _add_sphere(stage, f"{root}/MotionRig/LeftHand", (-1.9, y_offset - 0.18, 1.12), 0.04, material)
+    right_hand_joint = _add_sphere(stage, f"{root}/MotionRig/RightHand", (-1.9, y_offset + 0.18, 1.12), 0.04, material)
+    left_foot_joint = _add_sphere(stage, f"{root}/MotionRig/LeftFoot", (-1.9, y_offset - 0.08, 0.08), 0.035, material)
+    right_foot_joint = _add_sphere(stage, f"{root}/MotionRig/RightFoot", (-1.9, y_offset + 0.08, 0.08), 0.035, material)
+    left_forearm = _add_cube(stage, f"{root}/MotionRig/LeftForearm", (-1.9, y_offset - 0.17, 1.12), (0.055, 0.012, 0.012), material)
+    right_forearm = _add_cube(stage, f"{root}/MotionRig/RightForearm", (-1.9, y_offset + 0.17, 1.12), (0.055, 0.012, 0.012), material)
+    success_token = _add_cube(stage, f"{root}/StatusTokens/Success", (-1.9, y_offset, -1.0), (0.08, 0.035, 0.035), materials["success_green"])
+    failure_token = _add_cube(stage, f"{root}/StatusTokens/Failure", (-1.9, y_offset, -1.0), (0.09, 0.045, 0.045), materials["failure_red"])
+    recovery_token = _add_cube(stage, f"{root}/StatusTokens/Recovery", (-1.9, y_offset, -1.0), (0.08, 0.04, 0.04), materials["warning_amber"])
+    progress_bar = _add_cube(stage, f"{root}/ProgressBar", (-1.9, y_offset, 0.045), (0.01, 0.025, 0.025), material)
+    for segment in segments:
         frame = segment.frame
         x, _, z = segment.root_xyz
+        gait = 0.08 if segment.gesture == "walk" else 0.02
+        foot_phase = -1 if segment.tool_call_index % 2 else 1
+        status_z = 1.34 if segment.status == "failed" else 1.25 if segment.status == "recovery" else 1.16
         humanoid_asset.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, z), frame)
         left_target.GetOrderedXformOps()[0].Set(
             Gf.Vec3d(segment.left_hand_xyz[0], y_offset - 0.18, segment.left_hand_xyz[2]),
@@ -400,6 +515,30 @@ def _write_humanoid_actor(
             Gf.Vec3d(segment.right_hand_xyz[0], y_offset, max(0.82, segment.right_hand_xyz[2] - 0.08)),
             frame,
         )
+        torso_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.08 + (0.04 if segment.status == "failed" else 0.0)), frame)
+        head_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + (0.04 if segment.status == "failed" else 0.0), y_offset, 1.43), frame)
+        left_hand_joint.GetOrderedXformOps()[0].Set(
+            Gf.Vec3d(segment.left_hand_xyz[0], y_offset - 0.20, segment.left_hand_xyz[2]),
+            frame,
+        )
+        right_hand_joint.GetOrderedXformOps()[0].Set(
+            Gf.Vec3d(segment.right_hand_xyz[0], y_offset + 0.20, segment.right_hand_xyz[2]),
+            frame,
+        )
+        left_foot_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x - gait * foot_phase, y_offset - 0.08, 0.08), frame)
+        right_foot_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + gait * foot_phase, y_offset + 0.08, 0.08), frame)
+        left_forearm.GetOrderedXformOps()[0].Set(
+            Gf.Vec3d((x + segment.left_hand_xyz[0]) / 2, y_offset - 0.19, (1.12 + segment.left_hand_xyz[2]) / 2),
+            frame,
+        )
+        right_forearm.GetOrderedXformOps()[0].Set(
+            Gf.Vec3d((x + segment.right_hand_xyz[0]) / 2, y_offset + 0.19, (1.12 + segment.right_hand_xyz[2]) / 2),
+            frame,
+        )
+        success_token.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, status_z if segment.status == "success" else -1.0), frame)
+        failure_token.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, status_z if segment.status == "failed" else -1.0), frame)
+        recovery_token.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, status_z if segment.status == "recovery" else -1.0), frame)
+        progress_bar.GetOrderedXformOps()[0].Set(Gf.Vec3d(-2.05 + 4.1 * segment.progress_fraction, y_offset, 0.045), frame)
         if use_proxy and proxy_prims:
             proxy_prims[0].GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.08), frame)
             proxy_prims[1].GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.43), frame)

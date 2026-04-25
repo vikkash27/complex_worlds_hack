@@ -57,7 +57,19 @@ def fetch_assets(target_dir: Path, *, dry_run: bool = False) -> Path:
     else:
         _run(["git", "lfs", "install"])
 
-    plan.target_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        plan.target_dir.mkdir(parents=True, exist_ok=True)
+    except PermissionError as exc:
+        isaac_art = ROOT / "artifacts" / "isaac"
+        raise RuntimeError(
+            f"Permission denied creating {plan.target_dir}. "
+            "This often happens when Docker/Isaac created `artifacts/isaac` as root. "
+            "On the Brev host run:\n"
+            f"  sudo chown -R \"$USER:$USER\" {isaac_art}\n"
+            "or remove the vendor tree and retry:\n"
+            f"  sudo rm -rf {isaac_art / 'vendor'}\n"
+            "Then re-run this script."
+        ) from exc
     _clone_if_missing(UNITREE_MODEL_REPO, plan.target_dir / "unitree_model")
     _clone_if_missing(UNITREE_ROS_REPO, plan.target_dir / "unitree_ros")
 
