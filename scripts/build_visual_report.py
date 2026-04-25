@@ -8,9 +8,14 @@ from pathlib import Path
 def build_visual_report(artifacts_dir: Path, output_path: Path) -> None:
     metrics_path = artifacts_dir / "metrics" / "leaderboard.json"
     leaderboard = json.loads(metrics_path.read_text(encoding="utf-8"))
-    random_metrics = leaderboard["random_baseline"]
-    trained_metrics = leaderboard["dense_trained_policy"]
+    randomized = leaderboard.get("randomized_heldout", {})
+    baseline_metrics = randomized.get(
+        "reactive_script",
+        randomized.get("fixed_script", leaderboard.get("random_baseline", {})),
+    )
+    trained_metrics = randomized.get("dense_trained", leaderboard.get("dense_trained_policy", {}))
     headline = leaderboard["headline"]
+    trace_preview = _trace_preview(artifacts_dir / "traces" / "dense_trained.jsonl")
 
     report = f"""<!doctype html>
 <html lang="en">
@@ -40,7 +45,7 @@ def build_visual_report(artifacts_dir: Path, output_path: Path) -> None:
 <body>
 <main>
   <h1>RoboCerebra Reward Lab</h1>
-  <p class="subtitle">Dense Gemini-style subgoal rewards turn a sparse 1000-tick physical-AI workflow into a learnable OpenReward benchmark. The trained macro-policy completes the breakfast-tray disturbance task while the random baseline stalls.</p>
+  <p class="subtitle">Dense Gemini-style subgoal rewards are evaluated on randomized held-out physical-AI scenes. The old deterministic 100% result is now treated as a smoke test; the headline below compares the dense policy against a stronger fixed-script baseline under distractors, action failures, and disturbance variations.</p>
 
   <section class="stats">
     <div class="stat"><strong>{headline["progress_lift"]:+.3f}</strong><span>progress_lift</span></div>
@@ -50,23 +55,33 @@ def build_visual_report(artifacts_dir: Path, output_path: Path) -> None:
 
   <section class="grid">
     <div class="panel">
-      <h2>Random Baseline</h2>
-      <p>Success rate: <strong>{random_metrics["success_rate"]:.1%}</strong><br />
-      Mean progress: <strong>{random_metrics["mean_progress"]:.1%}</strong><br />
-      Disturbance recovery: <strong>{random_metrics["disturbance_recovery_rate"]:.1%}</strong></p>
+      <h2>Reactive-Script Baseline</h2>
+      <p>Success rate: <strong>{baseline_metrics["success_rate"]:.1%}</strong><br />
+      Mean progress: <strong>{baseline_metrics["mean_progress"]:.1%}</strong><br />
+      Disturbance recovery: <strong>{baseline_metrics["disturbance_recovery_rate"]:.1%}</strong><br />
+      Tool calls: <strong>{baseline_metrics.get("mean_tool_calls", 0):.1f}</strong></p>
       <img src="../replays/baseline_random.gif" alt="Random baseline replay" />
     </div>
     <div class="panel">
       <h2>Dense Reward Policy</h2>
       <p>Success rate: <strong>{trained_metrics["success_rate"]:.1%}</strong><br />
       Mean progress: <strong>{trained_metrics["mean_progress"]:.1%}</strong><br />
-      Disturbance recovery: <strong>{trained_metrics["disturbance_recovery_rate"]:.1%}</strong></p>
+      Disturbance recovery: <strong>{trained_metrics["disturbance_recovery_rate"]:.1%}</strong><br />
+      Tool calls: <strong>{trained_metrics.get("mean_tool_calls", 0):.1f}</strong></p>
       <img src="../replays/dense_trained.gif" alt="Dense trained replay" />
     </div>
   </section>
 
   <h2>Training Curve</h2>
   <img src="../plots/training_curve.png" alt="Training curve" />
+
+  <h2>Side-by-Side Replay</h2>
+  <img src="../replays/side_by_side_before_after.gif" alt="Side-by-side before and after replay" />
+
+  <h2>Tool-Call Trace Preview</h2>
+  <div class="panel">
+    <pre>{html.escape(trace_preview)}</pre>
+  </div>
 
   <h2>Leaderboard JSON</h2>
   <div class="panel">
@@ -78,6 +93,19 @@ def build_visual_report(artifacts_dir: Path, output_path: Path) -> None:
 """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(report, encoding="utf-8")
+
+
+def _trace_preview(path: Path, max_lines: int = 8) -> str:
+    if not path.exists():
+        return "Trace not generated yet. Run scripts/run_demo.py first."
+    lines = path.read_text(encoding="utf-8").splitlines()[:max_lines]
+    pretty = []
+    for line in lines:
+        try:
+            pretty.append(json.dumps(json.loads(line), indent=2, sort_keys=True))
+        except json.JSONDecodeError:
+            pretty.append(line)
+    return "\n\n".join(pretty)
 
 
 def main() -> None:

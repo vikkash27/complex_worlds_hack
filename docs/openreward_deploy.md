@@ -72,6 +72,10 @@ orwd link vikkash/complex_worlds_hack vikkash27/complex_worlds_hack \
 OpenReward will build from GitHub and deploy the Docker image defined by this
 repo's `Dockerfile`.
 
+If `orwd link` prints “You need to install the OpenReward GitHub App”, complete
+the browser authorization for `vikkash27/complex_worlds_hack`, then rerun the
+same command.
+
 Monitor deployment:
 
 ```bash
@@ -91,3 +95,20 @@ https://openreward.ai/vikkash/complex_worlds_hack
 After deployment, use OpenReward's Runs/Rollouts tab to inspect uploaded
 trajectories. For the hackathon demo, the local artifacts under `artifacts/`
 remain the fastest evidence: leaderboard JSON, training plot, and replay GIFs.
+
+Run hosted benchmark calls:
+
+```bash
+set -a && source .env && set +a
+
+.venv/bin/python scripts/benchmark_openreward.py \
+  --environment vikkash/complex_worlds_hack \
+  --split test \
+  --episodes 10 \
+  --policy expert \
+  --output artifacts/openreward/hosted_expert_results.json
+```
+
+Before hosted deployment is linked, test the same script against the local
+server by passing `--base-url http://127.0.0.1:8080` and `--environment
+robocerebra_reward_lab`.

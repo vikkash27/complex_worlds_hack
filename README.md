@@ -31,6 +31,7 @@ Build a browser report from those artifacts:
 
 ```bash
 .venv/bin/python scripts/build_visual_report.py
+.venv/bin/python scripts/build_side_by_side.py
 open artifacts/visual_report/index.html
 ```
 
@@ -80,11 +81,14 @@ Each macro-action advances the simulator by enough internal ticks to produce a
 `scripts/run_demo.py` evaluates:
 
 - Random macro-action baseline.
-- Dense-reward tabular macro-policy.
+- Fixed-script and reactive-script baselines on randomized held-out scenes.
+- Sparse-trained and dense-reward tabular macro-policies.
 - Expert oracle ceiling.
 
 The leaderboard JSON reports success rate, mean progress, dense reward, mean
-ticks, disturbance recovery rate, and headline lift over the random baseline.
+ticks, disturbance recovery rate, confidence intervals, tool-call counts, and
+headline lift over the stronger reactive-script baseline. The old deterministic
+100% result is kept only under `deterministic_smoke_test`.
 
 ## Two-Minute Pitch
 
@@ -101,8 +105,9 @@ Use Brev/Isaac only after the core metrics are generated. The safe stretch is a
 visual replay, not training. If Isaac setup takes more than 45 minutes, preserve
 the benchmark story and submit the OpenReward environment plus metrics.
 
-For the safest cloud visualization path, serve `artifacts/visual_report` on Brev.
-See `docs/brev_visualization.md`.
+For the cloud visualization path and Isaac Sim core replay, see
+`docs/brev_visualization.md`. The Isaac script consumes the same JSONL traces
+used by the OpenReward evaluation so the 3D replay is tied to actual tool calls.
 
 ## Limitations
 
