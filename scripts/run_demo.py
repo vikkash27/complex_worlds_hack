@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -118,7 +119,8 @@ def write_plot(history: dict[str, object], baseline_reward: float, path: Path) -
 def score_sample_transition(path: Path) -> dict[str, object]:
     world = BreakfastTrayWorld(seed=42)
     transition = world.step("locate_items")
-    cache = GeminiRewardCache(path, scorer=gemini_reward_scorer())
+    scorer = gemini_reward_scorer() if os.getenv("ROBOCEREBRA_USE_GEMINI_VISION") == "1" else None
+    cache = GeminiRewardCache(path, scorer=scorer)
     return cache.score(
         world.task.task_id,
         transition.state_hash,

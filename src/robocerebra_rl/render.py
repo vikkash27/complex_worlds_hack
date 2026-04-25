@@ -12,7 +12,7 @@ def render_world(world: BreakfastTrayWorld, path: str | Path | None = None) -> I
     draw = ImageDraw.Draw(image)
 
     draw.rectangle((30, 40, 610, 320), outline="black", width=3)
-    draw.text((48, 55), "RoboCerebra Reward Lab: breakfast tray workflow", fill="black")
+    draw.text((48, 55), f"RoboCerebra Reward Lab: {world.task.label}", fill="black")
     draw.text((48, 82), f"Ticks: {world.ticks}/{world.horizon_ticks}", fill="black")
     draw.text((48, 106), f"Progress: {world.progress_fraction:.0%}", fill="black")
     draw.text((48, 130), f"Next: {world.expected_action}", fill="black")

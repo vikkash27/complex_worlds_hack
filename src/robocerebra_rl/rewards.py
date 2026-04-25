@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 from typing import Callable, TypedDict
 
 from robocerebra_rl.world import Transition
@@ -43,6 +44,49 @@ def default_symbolic_vlm_score(payload: dict[str, object]) -> GeminiScore:
             "Cached symbolic fallback: progress is inferred from the simulator "
             "state because GEMINI_API_KEY is not configured."
         ),
+    }
+
+
+def build_gemini_reward_contents(payload: dict[str, object]) -> dict[str, object]:
+    prompt = (
+        "You are scoring progress in a long-horizon robotic manipulation benchmark. "
+        "Use the rendered frame when provided and return strict JSON with "
+        "progress_delta, subgoal_complete, irreversible_error, confidence, and rationale. "
+        f"Task: {payload['task_id']}. Subgoal: {payload['subgoal']}. "
+        f"Action: {payload['action']}. Simulator progress delta: {payload['progress_delta']}. "
+        "Reward only real visible progress toward the subgoal; penalize unsafe or irreversible mistakes."
+    )
+    image: dict[str, object] | None = None
+    image_path = payload.get("image_path")
+    if image_path:
+        path = Path(str(image_path))
+        if path.exists():
+            mime_type = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
+            image = {"mime_type": mime_type, "bytes": path.read_bytes()}
+    return {"prompt": prompt, "image": image}
+
+
+def parse_gemini_score(text: str, *, fallback_progress_delta: float) -> GeminiScore:
+    cleaned = text.strip()
+    fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned, flags=re.DOTALL | re.IGNORECASE)
+    if fenced:
+        cleaned = fenced.group(1).strip()
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        parsed = {
+            "progress_delta": fallback_progress_delta,
+            "subgoal_complete": fallback_progress_delta > 0.0,
+            "irreversible_error": False,
+            "confidence": 0.5,
+            "rationale": text[:300],
+        }
+    return {
+        "progress_delta": float(parsed.get("progress_delta", fallback_progress_delta)),
+        "subgoal_complete": bool(parsed.get("subgoal_complete", False)),
+        "irreversible_error": bool(parsed.get("irreversible_error", False)),
+        "confidence": float(parsed.get("confidence", 0.5)),
+        "rationale": str(parsed.get("rationale", ""))[:500],
     }
 
 
@@ -92,36 +136,25 @@ class GeminiRewardCache:
             json.dump(self._cache, file, indent=2, sort_keys=True)
 
 
-def gemini_reward_scorer(model: str = "gemini-2.5-flash") -> Callable[[dict[str, object]], GeminiScore]:
+def gemini_reward_scorer(model: str | None = None) -> Callable[[dict[str, object]], GeminiScore]:
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
         return default_symbolic_vlm_score
 
     from google import genai
+    from google.genai import types
 
+    model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     client = genai.Client(api_key=api_key)
 
     def score(payload: dict[str, object]) -> GeminiScore:
-        prompt = (
-            "You are scoring progress in a long-horizon robotic manipulation benchmark. "
-            "Return strict JSON with progress_delta, subgoal_complete, irreversible_error, "
-            "confidence, and rationale. "
-            f"Task: {payload['task_id']}. Subgoal: {payload['subgoal']}. "
-            f"Action: {payload['action']}. Simulator progress delta: {payload['progress_delta']}."
-        )
-        response = client.models.generate_content(model=model, contents=prompt)
+        content = build_gemini_reward_contents(payload)
+        parts: list[object] = [str(content["prompt"])]
+        image = content.get("image")
+        if isinstance(image, dict):
+            parts.append(types.Part.from_bytes(data=image["bytes"], mime_type=str(image["mime_type"])))
+        response = client.models.generate_content(model=model_name, contents=parts)
         text = getattr(response, "text", "") or "{}"
-        try:
-            parsed = json.loads(text.strip().strip("`"))
-        except json.JSONDecodeError:
-            parsed = default_symbolic_vlm_score(payload)
-            parsed["rationale"] = text[:300] or parsed["rationale"]
-        return {
-            "progress_delta": float(parsed.get("progress_delta", payload.get("progress_delta", 0.0))),
-            "subgoal_complete": bool(parsed.get("subgoal_complete", False)),
-            "irreversible_error": bool(parsed.get("irreversible_error", False)),
-            "confidence": float(parsed.get("confidence", 0.5)),
-            "rationale": str(parsed.get("rationale", ""))[:500],
-        }
+        return parse_gemini_score(text, fallback_progress_delta=float(payload.get("progress_delta", 0.0)))
 
     return score

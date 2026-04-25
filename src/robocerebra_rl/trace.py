@@ -41,6 +41,8 @@ class ToolTraceLogger:
             "finished": finished,
             "state_hash": state_hash,
             "observation_summary": {
+                "task_name": observation.get("task_name"),
+                "task_label": observation.get("task_label"),
                 "ticks": observation.get("ticks"),
                 "progress_fraction": observation.get("progress_fraction"),
                 "expected_next": observation.get("expected_next"),

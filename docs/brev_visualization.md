@@ -102,6 +102,9 @@ artifacts/isaac/isaac_replay_summary.json
 ```
 
 Open the USD in Isaac Sim or stream the Brev viewport for the before/after demo.
+The current replay scene is a colored mobile-service-robot benchmark with
+three task stations and baseline-vs-trained lanes; see
+`docs/hackathon_demo_runbook.md` for the full demo flow and OpenReward metrics.
 
 ## 5. Headless livestream (WebRTC)
 

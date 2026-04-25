@@ -20,6 +20,28 @@ from robocerebra_rl.world import iter_policy_actions
 from robocerebra_rl.world import BreakfastTrayWorld, SceneConfig
 
 
+def summarize_policy_comparison(
+    *,
+    baseline_name: str,
+    improved_name: str,
+    baseline_metrics: dict[str, object],
+    improved_metrics: dict[str, object],
+    gemini_metrics: dict[str, object] | None = None,
+) -> dict[str, object]:
+    return {
+        "baseline_policy": baseline_name,
+        "improved_policy": improved_name,
+        "success_lift": round(float(improved_metrics["success_rate"]) - float(baseline_metrics["success_rate"]), 6),
+        "mean_reward_lift": round(float(improved_metrics["mean_reward"]) - float(baseline_metrics["mean_reward"]), 6),
+        "tool_call_delta": round(float(improved_metrics["mean_tool_calls"]) - float(baseline_metrics["mean_tool_calls"]), 6),
+        "gemini_vision": gemini_metrics or {"enabled": False},
+        "claim_boundary": (
+            "Measures macro-policy tool use through OpenReward sessions. "
+            "It is not low-level Isaac physics training."
+        ),
+    }
+
+
 def evaluate_environment(
     *,
     environment_name: str,
@@ -28,6 +50,7 @@ def evaluate_environment(
     episodes: int,
     policy_name: str,
     output_path: Path,
+    score_progress: bool = False,
 ) -> dict[str, object]:
     client = OpenReward(base_url=base_url) if base_url else OpenReward()
     environment = client.environments.get(name=environment_name)
@@ -38,6 +61,8 @@ def evaluate_environment(
     successes: list[float] = []
     rewards: list[float] = []
     tool_calls: list[int] = []
+    gemini_confidences: list[float] = []
+    gemini_agreements: list[float] = []
     rollout_rows: list[dict[str, object]] = []
 
     for episode in range(episodes):
@@ -64,6 +89,28 @@ def evaluate_environment(
                 result = session.call_tool("execute_skill", {"action": action})
                 calls += 1
                 episode_reward += float(result.reward or 0.0)
+                if score_progress:
+                    score = session.call_tool("score_progress", {"subgoal": local_transition.expected_action})
+                    metadata = getattr(score, "metadata", {}) or {}
+                    confidence = float(metadata.get("confidence", 0.0))
+                    complete = bool(metadata.get("subgoal_complete", False))
+                    expected_complete = local_transition.progress_delta > 0.0
+                    gemini_confidences.append(confidence)
+                    gemini_agreements.append(1.0 if complete == expected_complete else 0.0)
+                    rollout_rows.append(
+                        {
+                            "episode": episode,
+                            "event": "score_progress",
+                            "subgoal": local_transition.expected_action,
+                            "reward": score.reward,
+                            "progress_delta": metadata.get("progress_delta"),
+                            "subgoal_complete": metadata.get("subgoal_complete"),
+                            "confidence": confidence,
+                            "agreement": complete == expected_complete,
+                            "rationale": metadata.get("rationale"),
+                            "image_path": metadata.get("image_path"),
+                        }
+                    )
                 rollout_rows.append(
                     {
                         "episode": episode,
@@ -95,6 +142,12 @@ def evaluate_environment(
         "mean_reward": round(sum(rewards) / len(rewards), 6),
         "mean_tool_calls": round(sum(tool_calls) / len(tool_calls), 6),
     }
+    if score_progress and gemini_confidences:
+        metrics["gemini_vision"] = {
+            "enabled": True,
+            "mean_confidence": round(sum(gemini_confidences) / len(gemini_confidences), 6),
+            "agreement_rate": round(sum(gemini_agreements) / len(gemini_agreements), 6),
+        }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps({"metrics": metrics, "rollouts": rollout_rows}, indent=2), encoding="utf-8")
     return metrics
@@ -117,6 +170,7 @@ def _world_from_task_spec(task_spec: object) -> BreakfastTrayWorld:
         horizon_ticks=int(spec.get("horizon_ticks", 1000)),
         max_macro_steps=int(spec.get("max_macro_steps", 30)),
         scene=scene,
+        task_name=str(spec.get("task_name", "breakfast_tray")),
     )
 
 
@@ -127,6 +181,8 @@ def main() -> None:
     parser.add_argument("--split", default="test")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--policy", default="expert", choices=["expert", "reactive_script", "fixed_script", "random"])
+    parser.add_argument("--compare-policy", default=None, choices=["expert", "reactive_script", "fixed_script", "random"])
+    parser.add_argument("--score-progress", action="store_true", help="Call score_progress after each execute_skill.")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts" / "openreward" / "benchmark_results.json")
     args = parser.parse_args()
 
@@ -137,8 +193,31 @@ def main() -> None:
         episodes=args.episodes,
         policy_name=args.policy,
         output_path=args.output,
+        score_progress=args.score_progress,
     )
-    print(json.dumps(metrics, indent=2, sort_keys=True))
+    output: dict[str, object] = {"metrics": metrics}
+    if args.compare_policy:
+        compare_output = args.output.with_name(f"{args.compare_policy}_comparison_results.json")
+        compare_metrics = evaluate_environment(
+            environment_name=args.environment,
+            base_url=args.base_url,
+            split=args.split,
+            episodes=args.episodes,
+            policy_name=args.compare_policy,
+            output_path=compare_output,
+            score_progress=args.score_progress,
+        )
+        comparison = summarize_policy_comparison(
+            baseline_name=args.policy,
+            improved_name=args.compare_policy,
+            baseline_metrics=metrics,
+            improved_metrics=compare_metrics,
+            gemini_metrics=compare_metrics.get("gemini_vision") if isinstance(compare_metrics.get("gemini_vision"), dict) else None,
+        )
+        output["comparison"] = comparison
+        summary_path = args.output.with_name(f"{args.output.stem}_comparison_summary.json")
+        summary_path.write_text(json.dumps(output, indent=2, sort_keys=True), encoding="utf-8")
+    print(json.dumps(output, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

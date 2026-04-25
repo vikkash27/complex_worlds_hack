@@ -17,8 +17,19 @@ SUBGOALS = [
     "deliver_tray",
 ]
 
+SHOWCASE_SUBGOALS = [
+    "stabilize_spill",
+    "place_absorbent_pad",
+    "scan_countertop",
+    "sort_recyclables",
+    "place_utensils",
+    "wipe_countertop",
+    "verify_cleanup",
+]
+
 ACTIONS = [
     *SUBGOALS,
+    *SHOWCASE_SUBGOALS,
     "inspect_scene",
     "wait",
     "replan",
@@ -28,9 +39,69 @@ ACTIONS = [
 @dataclass(frozen=True)
 class TaskSpec:
     task_id: str
+    task_name: str
+    label: str
     instruction: str
     subgoals: tuple[str, ...] = tuple(SUBGOALS)
     horizon_ticks: int = 1000
+    requires_disturbance_recovery: bool = True
+
+
+@dataclass(frozen=True)
+class TaskTemplate:
+    task_name: str
+    label: str
+    instruction: str
+    subgoals: tuple[str, ...]
+    requires_disturbance_recovery: bool = False
+
+
+TASK_LIBRARY: dict[str, TaskTemplate] = {
+    "breakfast_tray": TaskTemplate(
+        task_name="breakfast_tray",
+        label="Breakfast tray",
+        instruction=(
+            "Prepare and deliver a breakfast tray. Locate the mug and snack, "
+            "clear the workspace, fill the drink, recover from the tray bump, "
+            "and deliver without spilling."
+        ),
+        subgoals=tuple(SUBGOALS),
+        requires_disturbance_recovery=True,
+    ),
+    "spill_recovery": TaskTemplate(
+        task_name="spill_recovery",
+        label="Spill recovery",
+        instruction=(
+            "Stabilize a bumped service tray, place an absorbent pad, clear the "
+            "workspace, recover the disturbance, and deliver the tray safely."
+        ),
+        subgoals=(
+            "locate_items",
+            "stabilize_spill",
+            "place_absorbent_pad",
+            "clear_workspace",
+            "recover_disturbance",
+            "deliver_tray",
+        ),
+        requires_disturbance_recovery=True,
+    ),
+    "countertop_cleanup": TaskTemplate(
+        task_name="countertop_cleanup",
+        label="Countertop cleanup",
+        instruction=(
+            "Complete a countertop cleanup task: scan the workspace, sort "
+            "recyclables, place utensils, wipe the countertop, and verify cleanup."
+        ),
+        subgoals=(
+            "scan_countertop",
+            "sort_recyclables",
+            "place_utensils",
+            "wipe_countertop",
+            "verify_cleanup",
+        ),
+        requires_disturbance_recovery=False,
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -90,6 +161,7 @@ class BreakfastTrayWorld:
     horizon_ticks: int = 1000
     max_macro_steps: int = 18
     scene: SceneConfig = field(default_factory=SceneConfig)
+    task_name: str = "breakfast_tray"
     task: TaskSpec = field(init=False)
     ticks: int = field(init=False, default=0)
     macro_steps: int = field(init=False, default=0)
@@ -105,14 +177,17 @@ class BreakfastTrayWorld:
 
     def __post_init__(self) -> None:
         self._rng = random.Random(self.seed)
+        template = TASK_LIBRARY.get(self.task_name)
+        if template is None:
+            raise ValueError(f"Unknown task_name: {self.task_name!r}")
         self.task = TaskSpec(
-            task_id=f"breakfast-tray-{self.seed}",
-            instruction=(
-                "Prepare and deliver a breakfast tray. Locate the mug and snack, "
-                "clear the workspace, fill the drink, recover from the tray bump, "
-                "and deliver without spilling."
-            ),
+            task_id=f"{template.task_name.replace('_', '-')}-{self.seed}",
+            task_name=template.task_name,
+            label=template.label,
+            instruction=template.instruction,
+            subgoals=template.subgoals,
             horizon_ticks=self.horizon_ticks,
+            requires_disturbance_recovery=template.requires_disturbance_recovery,
         )
 
     @property
@@ -152,6 +227,8 @@ class BreakfastTrayWorld:
         remaining = list(self.task.subgoals[self.progress_index :])
         return {
             "task_id": self.task.task_id,
+            "task_name": self.task.task_name,
+            "task_label": self.task.label,
             "instruction": self.task.instruction,
             "ticks": self.ticks,
             "macro_steps": self.macro_steps,
@@ -190,7 +267,7 @@ class BreakfastTrayWorld:
             reward = -0.01
         elif action == expected and self._action_can_progress(action):
             self.progress_index += 1
-            if action == "recover_disturbance":
+            if action in {"recover_disturbance", "stabilize_spill"}:
                 self.disturbance_recovered = True
             progress_delta = self.progress_fraction - before
             reward = 0.25 + progress_delta + (0.1 if self.disturbance_recovered else 0.0)
@@ -199,7 +276,7 @@ class BreakfastTrayWorld:
             reward = -0.08
 
         if self.progress_index >= len(self.task.subgoals):
-            self.success = self.disturbance_recovered
+            self.success = (not self.task.requires_disturbance_recovery) or self.disturbance_recovered
             self.done = True
             self.ticks = max(self.ticks, self.horizon_ticks)
             reward += 1.0 if self.success else -0.5
@@ -214,7 +291,7 @@ class BreakfastTrayWorld:
             self.last_failure_reason = "needs_inspection"
             return False
         if (
-            action == "recover_disturbance"
+            action in {"recover_disturbance", "stabilize_spill"}
             and self.scene.disturbance_severity >= 0.5
             and not self.replanned
         ):
@@ -255,7 +332,7 @@ def iter_policy_actions(policy: str | Iterable[str] | object, world: BreakfastTr
             ):
                 return "inspect_scene"
             if (
-                world.expected_action == "recover_disturbance"
+                world.expected_action in {"recover_disturbance", "stabilize_spill"}
                 and world.scene.disturbance_severity >= 0.5
                 and not world.replanned
             ):
@@ -264,14 +341,14 @@ def iter_policy_actions(policy: str | Iterable[str] | object, world: BreakfastTr
         if policy == "random":
             return world._rng.choice(ACTIONS)
         if policy == "fixed_script":
-            index = min(world.macro_steps, len(SUBGOALS) - 1)
-            return SUBGOALS[index]
+            index = min(world.macro_steps, len(world.task.subgoals) - 1)
+            return world.task.subgoals[index]
         if policy == "reactive_script":
             sequence: list[str] = []
             if world.scene.distractor_count > 0:
                 sequence.append("inspect_scene")
-            for subgoal in SUBGOALS:
-                if subgoal == "recover_disturbance" and world.scene.disturbance_severity >= 0.5:
+            for subgoal in world.task.subgoals:
+                if subgoal in {"recover_disturbance", "stabilize_spill"} and world.scene.disturbance_severity >= 0.5:
                     sequence.append("replan")
                 sequence.append(subgoal)
             index = min(world.macro_steps, len(sequence) - 1)

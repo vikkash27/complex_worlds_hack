@@ -20,9 +20,9 @@ from openreward.environments import (
 from pydantic import BaseModel, Field
 
 from robocerebra_rl.render import render_world
-from robocerebra_rl.rewards import GeminiRewardCache, symbolic_dense_reward
+from robocerebra_rl.rewards import GeminiRewardCache, gemini_reward_scorer, symbolic_dense_reward
 from robocerebra_rl.trace import ToolTraceLogger
-from robocerebra_rl.world import ACTIONS, BreakfastTrayWorld, SceneConfig
+from robocerebra_rl.world import ACTIONS, TASK_LIBRARY, BreakfastTrayWorld, SceneConfig
 
 
 class ChooseSubgoalInput(BaseModel):
@@ -48,9 +48,13 @@ class RoboCerebraRewardLabEnv(Environment):
             horizon_ticks=int(spec.get("horizon_ticks", 1000)),
             max_macro_steps=int(spec.get("max_macro_steps", 30 if scene != SceneConfig() else 18)),
             scene=scene,
+            task_name=str(spec.get("task_name", "breakfast_tray")),
         )
         self.current_subgoal = self.world.expected_action
-        self.reward_cache = GeminiRewardCache(".openreward/gemini_reward_cache.json")
+        scorer = gemini_reward_scorer() if os.getenv("ROBOCEREBRA_USE_GEMINI_VISION") == "1" else None
+        cache_path = os.getenv("ROBOCEREBRA_REWARD_CACHE", ".openreward/gemini_reward_cache.json")
+        self.reward_cache = GeminiRewardCache(cache_path, scorer=scorer)
+        self.last_progress_delta = 0.0
         trace_path = spec.get("trace_path") or os.getenv("ROBOCEREBRA_TRACE_PATH")
         if not trace_path:
             trace_path = f".openreward/traces/{self.world.task.task_id}.jsonl"
@@ -71,9 +75,12 @@ class RoboCerebraRewardLabEnv(Environment):
     @classmethod
     def list_tasks(cls, split: str) -> list[dict[str, Any]]:
         seeds = {"train": [1, 2, 3], "validation": [1001], "test": [2001, 2002, 2003, 2004]}.get(split, [0])
+        task_names = ["breakfast_tray", "spill_recovery", "countertop_cleanup"]
         return [
             {
-                "task_id": f"breakfast-tray-{seed}",
+                "task_id": f"{task_name.replace('_', '-')}-{seed}",
+                "task_name": task_name,
+                "task_label": TASK_LIBRARY[task_name].label,
                 "seed": seed,
                 "horizon_ticks": 1000 + (seed % 2) * 500,
                 "max_macro_steps": 18 if seed >= 1000 else 30,
@@ -89,12 +96,10 @@ class RoboCerebraRewardLabEnv(Environment):
                         }
                     ).as_dict()
                 ),
-                "instruction": (
-                    "Prepare and deliver a breakfast tray under a mid-task disturbance. "
-                    "Use macro-skills and ask for progress scores at subgoal boundaries."
-                ),
+                "instruction": TASK_LIBRARY[task_name].instruction,
             }
             for seed in seeds
+            for task_name in task_names
         ]
 
     def get_prompt(self) -> list[TextBlock]:
@@ -102,8 +107,9 @@ class RoboCerebraRewardLabEnv(Environment):
             TextBlock(
                 text=(
                     "You are controlling a long-horizon RoboCerebra-style manipulation workflow. "
-                    "Complete the breakfast tray task by choosing semantic subgoals, executing "
-                    "macro-skills, and using dense reward feedback to recover from disturbances."
+                    f"Task: {self.world.task.label}. Instruction: {self.world.task.instruction} "
+                    "Choose semantic subgoals, execute macro-skills, and use dense reward feedback "
+                    "to recover from failures when the task requires it."
                 )
             )
         ]
@@ -152,6 +158,7 @@ class RoboCerebraRewardLabEnv(Environment):
     @tool
     async def execute_skill(self, params: ExecuteSkillInput) -> ToolOutput:
         transition = self.world.step(params.action)
+        self.last_progress_delta = transition.progress_delta
         reward = symbolic_dense_reward(transition)
         reward_components = {
             "progress": round(transition.progress_delta * 1.5, 6),
@@ -196,11 +203,14 @@ class RoboCerebraRewardLabEnv(Environment):
 
     @tool
     async def score_progress(self, params: ScoreProgressInput) -> ToolOutput:
+        image_path = self._write_observation_image()
         score = self.reward_cache.score(
             self.world.task.task_id,
             self.world.state_hash(),
             params.subgoal,
             self.world.action_history[-1] if self.world.action_history else "observe",
+            progress_delta=self.last_progress_delta,
+            image_path=image_path,
         )
         reward = float(score["progress_delta"]) + 0.1 * float(score["confidence"])
         self._record_trace(
@@ -227,7 +237,7 @@ class RoboCerebraRewardLabEnv(Environment):
             ],
             reward=round(reward, 6),
             finished=self.world.done,
-            metadata=dict(score),
+            metadata={**dict(score), "image_path": image_path},
         )
 
     @tool
@@ -267,6 +277,13 @@ class RoboCerebraRewardLabEnv(Environment):
         image.save(buffer, format="PNG")
         data = base64.b64encode(buffer.getvalue()).decode("ascii")
         return ImageBlock(data=data, mimeType="image/png")
+
+    def _write_observation_image(self) -> str:
+        image_dir = Path(os.getenv("ROBOCEREBRA_OBSERVATION_IMAGE_DIR", ".openreward/frames"))
+        image_dir.mkdir(parents=True, exist_ok=True)
+        image_path = image_dir / f"{self.world.task.task_id}-{self.world.macro_steps:03d}-{self.world.state_hash()}.png"
+        render_world(self.world, image_path)
+        return str(image_path)
 
     def _record_trace(
         self,
