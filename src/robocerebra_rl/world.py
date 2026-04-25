@@ -27,9 +27,17 @@ SHOWCASE_SUBGOALS = [
     "verify_cleanup",
 ]
 
+HUMANOID_SUBGOALS = tuple(
+    f"{phase}_{station}_{step}"
+    for station in ("pantry", "counter", "sink", "table", "delivery")
+    for phase in ("scan", "navigate", "grasp", "place", "verify", "report")
+    for step in (1,)
+)
+
 ACTIONS = [
     *SUBGOALS,
     *SHOWCASE_SUBGOALS,
+    *HUMANOID_SUBGOALS,
     "inspect_scene",
     "wait",
     "replan",
@@ -99,6 +107,17 @@ TASK_LIBRARY: dict[str, TaskTemplate] = {
             "wipe_countertop",
             "verify_cleanup",
         ),
+        requires_disturbance_recovery=False,
+    ),
+    "humanoid_hospitality": TaskTemplate(
+        task_name="humanoid_hospitality",
+        label="Humanoid hospitality lab",
+        instruction=(
+            "Coordinate a humanoid hospitality assistant through pantry, counter, sink, "
+            "table, and delivery stations. Use repeated observation, subgoal selection, "
+            "skill execution, and visual scoring to complete a long-horizon service task."
+        ),
+        subgoals=HUMANOID_SUBGOALS,
         requires_disturbance_recovery=False,
     ),
 }

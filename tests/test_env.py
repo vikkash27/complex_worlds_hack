@@ -48,7 +48,7 @@ def test_openreward_task_list_includes_showcase_task_names():
     tasks = RoboCerebraRewardLabEnv.list_tasks("test")
     task_names = {task["task_name"] for task in tasks}
 
-    assert {"breakfast_tray", "spill_recovery", "countertop_cleanup"}.issubset(task_names)
+    assert {"breakfast_tray", "spill_recovery", "countertop_cleanup", "humanoid_hospitality"}.issubset(task_names)
     assert all("task_name" in task for task in tasks)
 
 

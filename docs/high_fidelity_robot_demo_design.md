@@ -12,6 +12,7 @@ The Isaac stage should look like a service robot benchmark rather than a toy blo
 - Three visible task stations: breakfast tray, spill recovery, and countertop cleanup.
 - Colored materials, labels, lights, camera framing, progress markers, and action-driven animation.
 - Hybrid assets: use built-in Isaac/Omniverse robot and prop assets when available, with colored proxy geometry as deterministic fallback.
+- A humanoid showcase mode should center a Unitree H1 or IsaacSim Humanoid reference with an animated fallback skeleton for the 100+ event hospitality trace.
 
 ## Evaluation Direction
 
@@ -27,6 +28,7 @@ All OpenReward numbers must state that they measure macro-policy tool use throug
 Expected outputs:
 
 - `artifacts/isaac/breakfast_tray_side_by_side.usda`
+- `artifacts/isaac/humanoid_openreward_showcase.usda`
 - `artifacts/isaac/isaac_replay_summary.json`
 - `artifacts/openreward/*_results.json`
 - `artifacts/metrics/leaderboard.json`

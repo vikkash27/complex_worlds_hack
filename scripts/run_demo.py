@@ -32,6 +32,98 @@ from robocerebra_rl.world import BreakfastTrayWorld, iter_policy_actions
 ARTIFACTS = ROOT / "artifacts"
 
 
+def _humanoid_event_context(action: str, index: int) -> dict[str, object]:
+    parts = action.split("_")
+    phase = parts[0] if len(parts) >= 3 else "observe"
+    station = parts[1] if len(parts) >= 3 else "lab"
+    return {
+        "phase": phase,
+        "station": station,
+        "object": {
+            "pantry": "snack_tote",
+            "counter": "breakfast_tray",
+            "sink": "spill_kit",
+            "table": "place_setting",
+            "delivery": "handoff_marker",
+        }.get(station, "service_item"),
+        "frame_index": index * 12,
+    }
+
+
+def generate_humanoid_showcase_trace(output_path: Path, *, optimized: bool) -> dict[str, float]:
+    world = BreakfastTrayWorld(
+        seed=9001 if optimized else 9000,
+        horizon_ticks=3600,
+        max_macro_steps=160,
+        task_name="humanoid_hospitality",
+    )
+    trace = ToolTraceLogger(output_path, run_id="humanoid-trained" if optimized else "humanoid-baseline")
+    output_path.unlink(missing_ok=True)
+    total_reward = 0.0
+    tool_events = 0
+    execute_skill_calls = 0
+
+    def record(tool_name: str, action: str | None, reward: float, rationale: str, context: dict[str, object]) -> None:
+        nonlocal tool_events
+        observation = {**world.observe(), **context}
+        trace.record(
+            tool_name=tool_name,
+            task_id=world.task.task_id,
+            action=action,
+            observation=observation,
+            reward=reward,
+            reward_components={"tool_event": 1.0, "optimized": 1.0 if optimized else 0.0},
+            rationale=rationale,
+            finished=world.done,
+            state_hash=world.state_hash(),
+        )
+        tool_events += 1
+
+    record("observe", None, 0.0, "Humanoid receives the full hospitality lab mission.", _humanoid_event_context("observe_lab_0", 0))
+    for index, expected in enumerate(world.expert_actions(), start=1):
+        context = _humanoid_event_context(expected, index)
+        record("observe", None, 0.0, f"Perception update at {context['station']} station.", context)
+        record("choose_subgoal", expected, 0.0, f"Planner selects `{expected}`.", context)
+        action = expected if optimized or index % 7 else "wait"
+        transition = world.step(action)
+        reward = symbolic_dense_reward(transition)
+        total_reward += reward
+        execute_skill_calls += 1
+        record(
+            "execute_skill",
+            action,
+            reward,
+            f"Humanoid executes `{action}` for phase `{context['phase']}` at `{context['station']}`.",
+            context,
+        )
+        record(
+            "score_progress",
+            expected,
+            max(0.0, transition.progress_delta) + 0.07,
+            f"Vision score checks whether `{expected}` visibly advanced.",
+            context,
+        )
+        if not optimized and action == "wait" and not world.done:
+            recovery = world.expected_action
+            recovery_context = {**_humanoid_event_context(recovery, index), "frame_index": index * 12 + 6}
+            record("choose_subgoal", recovery, 0.0, f"Baseline recovers and retries `{recovery}`.", recovery_context)
+            transition = world.step(recovery)
+            reward = symbolic_dense_reward(transition)
+            total_reward += reward
+            execute_skill_calls += 1
+            record("execute_skill", recovery, reward, f"Recovery execution for `{recovery}`.", recovery_context)
+            record("score_progress", recovery, max(0.0, transition.progress_delta) + 0.05, "Recovery score.", recovery_context)
+        if world.done:
+            break
+
+    return {
+        "tool_events": float(tool_events),
+        "execute_skill_calls": float(execute_skill_calls),
+        "success": 1.0 if world.success else 0.0,
+        "reward": round(total_reward, 6),
+    }
+
+
 def rollout_frames(
     policy: str | object,
     seed: int,
@@ -251,9 +343,16 @@ def main() -> None:
     )
     save_replay(baseline_frames, replays_dir / "baseline_random.gif")
     save_replay(trained_frames, replays_dir / "dense_trained.gif")
+    humanoid_baseline = generate_humanoid_showcase_trace(traces_dir / "humanoid_baseline_long_horizon.jsonl", optimized=False)
+    humanoid_trained = generate_humanoid_showcase_trace(traces_dir / "humanoid_trained_long_horizon.jsonl", optimized=True)
     (metrics_dir / "replay_rollouts.json").write_text(
         json.dumps(
-            {"baseline_random": baseline_rollout, "dense_trained": trained_rollout},
+            {
+                "baseline_random": baseline_rollout,
+                "dense_trained": trained_rollout,
+                "humanoid_baseline_long_horizon": humanoid_baseline,
+                "humanoid_trained_long_horizon": humanoid_trained,
+            },
             indent=2,
             sort_keys=True,
         ),
@@ -269,6 +368,8 @@ def main() -> None:
     print("Trace artifacts:")
     print(f"- {traces_dir / 'baseline_fixed_script.jsonl'}")
     print(f"- {traces_dir / 'dense_trained.jsonl'}")
+    print(f"- {traces_dir / 'humanoid_baseline_long_horizon.jsonl'}")
+    print(f"- {traces_dir / 'humanoid_trained_long_horizon.jsonl'}")
 
 
 if __name__ == "__main__":

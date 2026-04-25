@@ -10,7 +10,13 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from robocerebra_rl.isaac_scene import ISAAC_ASSET_CANDIDATES, ShowcaseScenePlan, make_showcase_scene_plan
+from robocerebra_rl.isaac_scene import (
+    ISAAC_ASSET_CANDIDATES,
+    HumanoidShowcaseScenePlan,
+    ShowcaseScenePlan,
+    make_humanoid_showcase_scene_plan,
+    make_showcase_scene_plan,
+)
 
 
 def load_actions(path: Path) -> list[str]:
@@ -22,12 +28,24 @@ def load_actions(path: Path) -> list[str]:
     return actions
 
 
+def load_trace_events(path: Path) -> list[dict[str, object]]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def should_use_humanoid_showcase(events: list[dict[str, object]]) -> bool:
+    return any(
+        (event.get("observation_summary") or {}).get("task_name") == "humanoid_hospitality"
+        for event in events
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Replay RoboCerebra traces in Isaac Sim.")
     parser.add_argument("--baseline-trace", type=Path, required=True)
     parser.add_argument("--trained-trace", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--headless", action="store_true", default=True)
+    parser.add_argument("--humanoid-showcase", action="store_true", help="Force the H1/Humanoid long-horizon replay scene.")
     args = parser.parse_args()
 
     try:
@@ -43,26 +61,36 @@ def main() -> None:
 
         stage = omni.usd.get_context().get_stage()
         stage.SetStartTimeCode(0)
-        stage.SetEndTimeCode(240)
         stage.SetTimeCodesPerSecond(24)
         UsdGeom.SetStageMetersPerUnit(stage, 1.0)
 
-        baseline = load_actions(args.baseline_trace)
-        trained = load_actions(args.trained_trace)
-        scene_plan = make_showcase_scene_plan(baseline_actions=baseline, trained_actions=trained)
+        baseline_events = load_trace_events(args.baseline_trace)
+        trained_events = load_trace_events(args.trained_trace)
+        baseline = [str(event["action"]) for event in baseline_events if event.get("tool_name") == "execute_skill" and event.get("action")]
+        trained = [str(event["action"]) for event in trained_events if event.get("tool_name") == "execute_skill" and event.get("action")]
+        use_humanoid = args.humanoid_showcase or should_use_humanoid_showcase(baseline_events + trained_events)
+        scene_plan = (
+            make_humanoid_showcase_scene_plan(baseline_events=baseline_events, trained_events=trained_events)
+            if use_humanoid
+            else make_showcase_scene_plan(baseline_actions=baseline, trained_actions=trained)
+        )
+        stage.SetEndTimeCode(_end_time_for_scene(scene_plan))
         materials = _create_materials(stage, scene_plan)
         _add_lighting(stage)
         _add_camera(stage, scene_plan)
-        _write_showcase_stage(stage, scene_plan, materials)
+        if isinstance(scene_plan, HumanoidShowcaseScenePlan):
+            _write_humanoid_stage(stage, scene_plan, materials)
+        else:
+            _write_showcase_stage(stage, scene_plan, materials)
 
         args.output_dir.mkdir(parents=True, exist_ok=True)
-        usd_path = args.output_dir / "breakfast_tray_side_by_side.usda"
+        usd_path = args.output_dir / ("humanoid_openreward_showcase.usda" if use_humanoid else "breakfast_tray_side_by_side.usda")
         stage.GetRootLayer().Export(str(usd_path))
         summary = {
             "baseline_actions": baseline,
             "trained_actions": trained,
             "scene_title": scene_plan.title,
-            "tasks": [task.label for task in scene_plan.tasks],
+            "tasks": [task.label for task in scene_plan.tasks] if isinstance(scene_plan, ShowcaseScenePlan) else ["Humanoid hospitality lab"],
             "asset_candidates": ISAAC_ASSET_CANDIDATES,
             "usd": str(usd_path),
             "note": (
@@ -77,6 +105,16 @@ def main() -> None:
         print(usd_path)
     finally:
         simulation_app.close()
+
+
+def _end_time_for_scene(scene_plan: ShowcaseScenePlan | HumanoidShowcaseScenePlan) -> int:
+    if isinstance(scene_plan, HumanoidShowcaseScenePlan):
+        frames = [
+            int((event.get("observation_summary") or {}).get("frame_index") or 0)
+            for event in [*scene_plan.baseline_events, *scene_plan.trained_events]
+        ]
+        return max(240, max(frames, default=0) + 24)
+    return max(240, max(len(scene_plan.baseline_actions), len(scene_plan.trained_actions)) * 24 + 24)
 
 
 def _create_materials(stage, scene_plan: ShowcaseScenePlan) -> dict[str, object]:
@@ -150,8 +188,9 @@ def _add_asset_reference(
 
     prim = stage.DefinePrim(path, "Xform")
     prim.SetCustomDataByKey("fallback", "Colored proxy geometry is shown if referenced Isaac assets do not resolve.")
-    for candidate in candidates:
-        prim.GetReferences().AddReference(candidate)
+    prim.SetCustomDataByKey("asset_candidates", list(candidates))
+    if candidates:
+        prim.GetReferences().AddReference(candidates[0])
     xformable = UsdGeom.Xformable(prim)
     xformable.AddTranslateOp().Set(Gf.Vec3d(*translate))
     xformable.AddScaleOp().Set(Gf.Vec3f(*scale))
@@ -164,6 +203,63 @@ def _write_showcase_stage(stage, scene_plan: ShowcaseScenePlan, materials: dict[
         _add_task_station(stage, task, materials)
     for lane, actions in zip(scene_plan.lanes, [scene_plan.baseline_actions, scene_plan.trained_actions], strict=True):
         _write_lane(stage, f"/World/{lane.name.title()}", list(actions), lane, materials)
+
+
+def _write_humanoid_stage(stage, scene_plan: HumanoidShowcaseScenePlan, materials: dict[str, object]) -> None:
+    _add_cube(stage, "/World/LabFloor", (0.0, 0.0, -0.025), (4.4, 3.2, 0.025), materials["lab_floor"])
+    _add_cube(stage, "/World/MetricWall", (0.0, 1.55, 1.2), (4.1, 0.04, 1.2), materials["glass_cyan"])
+    for x, station in [(-1.7, "pantry"), (-0.85, "counter"), (0.0, "sink"), (0.85, "table"), (1.7, "delivery")]:
+        _add_cube(stage, f"/World/Stations/{station}/Platform", (x, 0.15, 0.25), (0.36, 0.48, 0.06), materials["humanoid_silver"])
+        _add_cube(stage, f"/World/Stations/{station}/Beacon", (x, -0.45, 0.62), (0.045, 0.045, 0.32), materials["warning_amber"])
+        stage.GetPrimAtPath(f"/World/Stations/{station}").SetDisplayName(station.title())
+    _write_humanoid_actor(stage, "/World/BaselineHumanoid", scene_plan.baseline_events, -0.78, materials["baseline_red"], scene_plan)
+    _write_humanoid_actor(stage, "/World/TrainedHumanoid", scene_plan.trained_events, 0.78, materials["policy_blue"], scene_plan)
+
+
+def _write_humanoid_actor(
+    stage,
+    root: str,
+    events: tuple[dict[str, object], ...],
+    y_offset: float,
+    material: object,
+    scene_plan: HumanoidShowcaseScenePlan,
+) -> None:
+    from pxr import Gf  # type: ignore[import-not-found]
+
+    root_prim = stage.DefinePrim(root, "Xform")
+    root_prim.SetDisplayName("Baseline humanoid" if y_offset < 0 else "Trained humanoid")
+    humanoid_asset = _add_asset_reference(
+        stage,
+        f"{root}/HumanoidAsset",
+        scene_plan.humanoid_asset_candidates,
+        (-1.9, y_offset, 0.85),
+        (0.28, 0.28, 0.28),
+    )
+    torso = _add_cube(stage, f"{root}/ProxyTorso", (-1.9, y_offset, 1.08), (0.12, 0.08, 0.28), material)
+    head = _add_cube(stage, f"{root}/ProxyHead", (-1.9, y_offset, 1.43), (0.075, 0.075, 0.075), materials_or_default(material))
+    left_arm = _add_cube(stage, f"{root}/LeftArm", (-1.9, y_offset - 0.12, 1.15), (0.045, 0.035, 0.18), material)
+    right_arm = _add_cube(stage, f"{root}/RightArm", (-1.9, y_offset + 0.12, 1.15), (0.045, 0.035, 0.18), material)
+    left_leg = _add_cube(stage, f"{root}/LeftLeg", (-1.9, y_offset - 0.055, 0.72), (0.045, 0.035, 0.24), material)
+    right_leg = _add_cube(stage, f"{root}/RightLeg", (-1.9, y_offset + 0.055, 0.72), (0.045, 0.035, 0.24), material)
+    stations = {"pantry": -1.7, "counter": -0.85, "sink": 0.0, "table": 0.85, "delivery": 1.7}
+    for event in events:
+        if event.get("tool_name") != "execute_skill":
+            continue
+        summary = event.get("observation_summary") or {}
+        station = str(summary.get("station") or "counter")
+        frame = int(summary.get("frame_index") or 0)
+        x = stations.get(station, 0.0)
+        humanoid_asset.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 0.85), frame)
+        torso.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.08), frame)
+        head.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.43), frame)
+        left_arm.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.04, y_offset - 0.15, 1.12), frame)
+        right_arm.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.12, y_offset + 0.15, 1.12), frame)
+        left_leg.GetOrderedXformOps()[0].Set(Gf.Vec3d(x - 0.04, y_offset - 0.055, 0.72), frame)
+        right_leg.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.04, y_offset + 0.055, 0.72), frame)
+
+
+def materials_or_default(material: object) -> object:
+    return material
 
 
 def _add_task_station(stage, task, materials: dict[str, object]) -> None:

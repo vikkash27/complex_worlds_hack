@@ -19,6 +19,12 @@ ISAAC_ASSET_CANDIDATES: dict[str, tuple[str, ...]] = {
         "/Isaac/Props/YCB/Axis_Aligned/025_mug.usd",
         "/Isaac/Props/YCB/Axis_Aligned/003_cracker_box.usd",
     ),
+    "humanoid": (
+        "/Isaac/Robots/Unitree/H1/h1.usd",
+        "/Isaac/Robots/Unitree/H1/h1_with_hand.usd",
+        "/Isaac/Robots/IsaacSim/Humanoid/humanoid.usd",
+        "/Isaac/Robots/IsaacSim/Humanoid/humanoid_instanceable.usd",
+    ),
 }
 
 
@@ -63,6 +69,16 @@ class ShowcaseScenePlan:
     trained_actions: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class HumanoidShowcaseScenePlan:
+    title: str
+    humanoid_asset_candidates: tuple[str, ...]
+    materials: tuple[MaterialSpec, ...]
+    camera: CameraSpec
+    baseline_events: tuple[dict[str, object], ...]
+    trained_events: tuple[dict[str, object], ...]
+
+
 def make_showcase_scene_plan(
     *,
     baseline_actions: list[str] | tuple[str, ...],
@@ -91,4 +107,27 @@ def make_showcase_scene_plan(
         camera=CameraSpec(position=(2.8, -4.8, 3.2), target=(0.1, 0.0, 0.75)),
         baseline_actions=tuple(baseline_actions),
         trained_actions=tuple(trained_actions),
+    )
+
+
+def make_humanoid_showcase_scene_plan(
+    *,
+    baseline_events: list[dict[str, object]] | tuple[dict[str, object], ...],
+    trained_events: list[dict[str, object]] | tuple[dict[str, object], ...],
+) -> HumanoidShowcaseScenePlan:
+    return HumanoidShowcaseScenePlan(
+        title="RoboCerebra Humanoid OpenReward Showcase",
+        humanoid_asset_candidates=ISAAC_ASSET_CANDIDATES["humanoid"],
+        materials=(
+            MaterialSpec("humanoid_silver", (0.76, 0.80, 0.86), roughness=0.32),
+            MaterialSpec("policy_blue", (0.04, 0.22, 0.95), roughness=0.35),
+            MaterialSpec("baseline_red", (0.82, 0.12, 0.08), roughness=0.45),
+            MaterialSpec("success_green", (0.05, 0.62, 0.26), roughness=0.4),
+            MaterialSpec("warning_amber", (1.0, 0.64, 0.05), roughness=0.45),
+            MaterialSpec("lab_floor", (0.025, 0.030, 0.045), roughness=0.55),
+            MaterialSpec("glass_cyan", (0.22, 0.88, 0.95), roughness=0.2),
+        ),
+        camera=CameraSpec(position=(4.6, -6.4, 4.2), target=(0.0, 0.0, 1.25), focal_length=26.0),
+        baseline_events=tuple(baseline_events),
+        trained_events=tuple(trained_events),
     )

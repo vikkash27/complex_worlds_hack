@@ -15,6 +15,8 @@ Expected artifacts:
 - `artifacts/metrics/leaderboard.json`
 - `artifacts/traces/baseline_fixed_script.jsonl`
 - `artifacts/traces/dense_trained.jsonl`
+- `artifacts/traces/humanoid_baseline_long_horizon.jsonl`
+- `artifacts/traces/humanoid_trained_long_horizon.jsonl`
 - `artifacts/replays/side_by_side_before_after.gif`
 
 ## 2. Start Isaac Sim streaming on Brev
@@ -69,6 +71,31 @@ Then in the streamed Isaac UI:
 2. Open `/workspace/complex_worlds_hack/artifacts/isaac/breakfast_tray_side_by_side.usda`.
 3. Press Play and scrub the timeline.
 
+## 3b. Generate the humanoid long-horizon showcase USD
+
+The humanoid showcase uses the same OpenReward/RoboCerebra trace contract, but
+with a 100+ event long-horizon hospitality task. It references built-in Isaac
+humanoid assets first (`Unitree/H1` and `IsaacSim/Humanoid`) and keeps an
+animated fallback skeleton if those assets are unavailable.
+
+```bash
+docker exec -it isaac-sim bash -lc 'cd /workspace/complex_worlds_hack && /isaac-sim/python.sh scripts/isaac/replay_breakfast_tray.py \
+  --baseline-trace artifacts/traces/humanoid_baseline_long_horizon.jsonl \
+  --trained-trace artifacts/traces/humanoid_trained_long_horizon.jsonl \
+  --output-dir artifacts/isaac \
+  --humanoid-showcase'
+```
+
+Then in the streamed Isaac UI:
+
+1. File -> Open.
+2. Open `/workspace/complex_worlds_hack/artifacts/isaac/humanoid_openreward_showcase.usda`.
+3. Press Play and scrub the timeline.
+
+Truthful claim: OpenReward/RoboCerebra optimizes the high-level planning and
+tool policy. Isaac Sim shows a high-fidelity replay of those decisions using a
+humanoid asset/fallback, not low-level humanoid RL training.
+
 ## 4. Run OpenReward comparison metrics
 
 Local server:
@@ -90,6 +117,29 @@ Second terminal:
   --score-progress \
   --output artifacts/openreward/local_reactive_vs_expert_results.json
 ```
+
+This reports per-policy `mean_tool_calls`, `total_tool_calls`, and comparison
+`aggregate_tool_calls`. For the long-horizon single-episode claim, use the
+humanoid trace metrics in `artifacts/metrics/replay_rollouts.json`.
+
+To back the 100+ call claim through OpenReward rather than only local traces,
+run a filtered single-episode humanoid benchmark:
+
+```bash
+.venv/bin/python scripts/benchmark_openreward.py \
+  --base-url http://127.0.0.1:8080 \
+  --environment robocerebra_reward_lab \
+  --split test \
+  --episodes 1 \
+  --task-name humanoid_hospitality \
+  --policy expert \
+  --score-progress \
+  --output artifacts/openreward/local_humanoid_100_call_episode.json
+```
+
+With `--score-progress`, the benchmark records `observe`, `choose_subgoal`,
+`execute_skill`, and `score_progress` around each humanoid micro-step, producing
+100+ OpenReward tool calls in one long-horizon episode.
 
 Hosted OpenReward:
 

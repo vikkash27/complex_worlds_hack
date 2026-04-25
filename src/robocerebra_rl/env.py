@@ -75,7 +75,7 @@ class RoboCerebraRewardLabEnv(Environment):
     @classmethod
     def list_tasks(cls, split: str) -> list[dict[str, Any]]:
         seeds = {"train": [1, 2, 3], "validation": [1001], "test": [2001, 2002, 2003, 2004]}.get(split, [0])
-        task_names = ["breakfast_tray", "spill_recovery", "countertop_cleanup"]
+        task_names = ["breakfast_tray", "spill_recovery", "countertop_cleanup", "humanoid_hospitality"]
         return [
             {
                 "task_id": f"{task_name.replace('_', '-')}-{seed}",

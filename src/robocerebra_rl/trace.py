@@ -43,6 +43,10 @@ class ToolTraceLogger:
             "observation_summary": {
                 "task_name": observation.get("task_name"),
                 "task_label": observation.get("task_label"),
+                "phase": observation.get("phase"),
+                "station": observation.get("station"),
+                "object": observation.get("object"),
+                "frame_index": observation.get("frame_index"),
                 "ticks": observation.get("ticks"),
                 "progress_fraction": observation.get("progress_fraction"),
                 "expected_next": observation.get("expected_next"),

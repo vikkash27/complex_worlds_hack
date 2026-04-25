@@ -34,6 +34,10 @@ def summarize_policy_comparison(
         "success_lift": round(float(improved_metrics["success_rate"]) - float(baseline_metrics["success_rate"]), 6),
         "mean_reward_lift": round(float(improved_metrics["mean_reward"]) - float(baseline_metrics["mean_reward"]), 6),
         "tool_call_delta": round(float(improved_metrics["mean_tool_calls"]) - float(baseline_metrics["mean_tool_calls"]), 6),
+        "baseline_total_tool_calls": int(baseline_metrics.get("total_tool_calls", 0)),
+        "improved_total_tool_calls": int(improved_metrics.get("total_tool_calls", 0)),
+        "aggregate_tool_calls": int(baseline_metrics.get("total_tool_calls", 0))
+        + int(improved_metrics.get("total_tool_calls", 0)),
         "gemini_vision": gemini_metrics or {"enabled": False},
         "claim_boundary": (
             "Measures macro-policy tool use through OpenReward sessions. "
@@ -51,10 +55,13 @@ def evaluate_environment(
     policy_name: str,
     output_path: Path,
     score_progress: bool = False,
+    task_name: str | None = None,
 ) -> dict[str, object]:
     client = OpenReward(base_url=base_url) if base_url else OpenReward()
     environment = client.environments.get(name=environment_name)
     tasks = list(environment.list_tasks(split=split))
+    if task_name:
+        tasks = [task for task in tasks if getattr(task, "task_spec", task).get("task_name") == task_name]
     if not tasks:
         raise RuntimeError(f"No tasks found for split {split!r} in {environment_name!r}")
 
@@ -86,6 +93,20 @@ def evaluate_environment(
             while not local_world.done:
                 action = iter_policy_actions(policy_name, local_world)
                 local_transition = local_world.step(action)
+                if score_progress:
+                    observed = session.call_tool("observe", {})
+                    calls += 1
+                    rollout_rows.append({"episode": episode, "event": "observe", "finished": observed.finished})
+                    chosen = session.call_tool("choose_subgoal", {"subgoal": local_transition.expected_action})
+                    calls += 1
+                    rollout_rows.append(
+                        {
+                            "episode": episode,
+                            "event": "choose_subgoal",
+                            "subgoal": local_transition.expected_action,
+                            "finished": chosen.finished,
+                        }
+                    )
                 result = session.call_tool("execute_skill", {"action": action})
                 calls += 1
                 episode_reward += float(result.reward or 0.0)
@@ -97,6 +118,7 @@ def evaluate_environment(
                     expected_complete = local_transition.progress_delta > 0.0
                     gemini_confidences.append(confidence)
                     gemini_agreements.append(1.0 if complete == expected_complete else 0.0)
+                    calls += 1
                     rollout_rows.append(
                         {
                             "episode": episode,
@@ -141,6 +163,7 @@ def evaluate_environment(
         "success_rate_ci95": ci95_for_rate(success_rate, episodes),
         "mean_reward": round(sum(rewards) / len(rewards), 6),
         "mean_tool_calls": round(sum(tool_calls) / len(tool_calls), 6),
+        "total_tool_calls": int(sum(tool_calls)),
     }
     if score_progress and gemini_confidences:
         metrics["gemini_vision"] = {
@@ -183,6 +206,7 @@ def main() -> None:
     parser.add_argument("--policy", default="expert", choices=["expert", "reactive_script", "fixed_script", "random"])
     parser.add_argument("--compare-policy", default=None, choices=["expert", "reactive_script", "fixed_script", "random"])
     parser.add_argument("--score-progress", action="store_true", help="Call score_progress after each execute_skill.")
+    parser.add_argument("--task-name", default=None, help="Filter OpenReward tasks by task_name, e.g. humanoid_hospitality.")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts" / "openreward" / "benchmark_results.json")
     args = parser.parse_args()
 
@@ -194,6 +218,7 @@ def main() -> None:
         policy_name=args.policy,
         output_path=args.output,
         score_progress=args.score_progress,
+        task_name=args.task_name,
     )
     output: dict[str, object] = {"metrics": metrics}
     if args.compare_policy:
@@ -206,6 +231,7 @@ def main() -> None:
             policy_name=args.compare_policy,
             output_path=compare_output,
             score_progress=args.score_progress,
+            task_name=args.task_name,
         )
         comparison = summarize_policy_comparison(
             baseline_name=args.policy,
