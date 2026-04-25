@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 
@@ -8,6 +9,7 @@ from robocerebra_rl.isaac_assets import (
     build_unitree_asset_fetch_plan,
     find_unitree_g1_asset,
     load_unitree_g1_manifest,
+    manifest_payload_from_asset,
     write_unitree_g1_manifest,
 )
 
@@ -38,6 +40,17 @@ def test_find_unitree_g1_asset_prefers_usd_then_urdf(tmp_path):
     assert any("g1_29dof.urdf" in path for path in UNITREE_G1_URDF_RELATIVE_PATHS)
 
 
+def test_find_unitree_g1_asset_prefers_variant_usd_names_before_urdf(tmp_path):
+    usd = tmp_path / "unitree_model" / "robots" / "g1" / "g1_29dof_with_hand.usd"
+    urdf = tmp_path / "unitree_ros" / "robots" / "g1_description" / "g1_29dof.urdf"
+    urdf.parent.mkdir(parents=True)
+    urdf.write_text("<robot name='g1' />", encoding="utf-8")
+    usd.parent.mkdir(parents=True)
+    usd.write_text("#usda 1.0", encoding="utf-8")
+
+    assert find_unitree_g1_asset(tmp_path) == usd
+
+
 def test_manifest_round_trips_with_existing_asset(tmp_path):
     asset = tmp_path / "unitree_model" / "G1" / "g1.usd"
     asset.parent.mkdir(parents=True)
@@ -50,6 +63,39 @@ def test_manifest_round_trips_with_existing_asset(tmp_path):
     assert loaded.asset_path == asset
     assert loaded.asset_kind == "usd"
     assert loaded.source == "unitree_model"
+
+
+def test_manifest_payload_stores_relative_asset_path_for_container_mounts(tmp_path):
+    asset = tmp_path / "unitree_ros" / "robots" / "g1_description" / "g1_29dof.urdf"
+    asset.parent.mkdir(parents=True)
+    asset.write_text("<robot name='g1' />", encoding="utf-8")
+
+    payload = manifest_payload_from_asset(root=tmp_path, asset_path=asset, source="unitree_ros")
+
+    assert payload["asset_relative_path"] == "unitree_ros/robots/g1_description/g1_29dof.urdf"
+    assert payload["asset_path"] == str(asset)
+
+
+def test_legacy_absolute_manifest_falls_back_to_discovery_under_current_root(tmp_path):
+    asset = tmp_path / "unitree_ros" / "robots" / "g1_description" / "g1_29dof.urdf"
+    asset.parent.mkdir(parents=True)
+    asset.write_text("<robot name='g1' />", encoding="utf-8")
+    manifest_path = tmp_path / "unitree_g1_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "root": "/home/ubuntu/complex_worlds_hack/artifacts/isaac/vendor/unitree",
+                "asset_path": "/home/ubuntu/complex_worlds_hack/artifacts/isaac/vendor/unitree/unitree_ros/robots/g1_description/g1_29dof.urdf",
+                "asset_kind": "urdf",
+                "source": "unitree_ros",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = load_unitree_g1_manifest(manifest_path)
+
+    assert loaded.asset_path == asset
 
 
 def test_manifest_rejects_missing_asset(tmp_path):

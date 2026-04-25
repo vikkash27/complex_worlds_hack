@@ -61,12 +61,29 @@ class UnitreeG1AssetManifest:
         return self.asset_path
 
     def as_json(self) -> dict[str, str]:
-        return {
-            "root": str(self.root),
-            "asset_path": str(self.asset_path),
-            "asset_kind": self.asset_kind,
-            "source": self.source,
-        }
+        return manifest_payload_from_asset(root=self.root, asset_path=self.asset_path, source=self.source, asset_kind=self.asset_kind)
+
+
+def manifest_payload_from_asset(
+    *,
+    root: Path,
+    asset_path: Path,
+    source: str,
+    asset_kind: str | None = None,
+) -> dict[str, str]:
+    suffix = asset_path.suffix.lower().lstrip(".")
+    resolved_kind = asset_kind or ("usd" if suffix in {"usd", "usda", "usdc"} else suffix)
+    try:
+        relative = asset_path.relative_to(root)
+    except ValueError:
+        relative = Path(asset_path.name)
+    return {
+        "root": str(root),
+        "asset_path": str(asset_path),
+        "asset_relative_path": relative.as_posix(),
+        "asset_kind": resolved_kind,
+        "source": source,
+    }
 
 
 def build_unitree_asset_fetch_plan(target_dir: Path) -> UnitreeAssetFetchPlan:
@@ -83,11 +100,19 @@ def build_unitree_asset_fetch_plan(target_dir: Path) -> UnitreeAssetFetchPlan:
 
 def find_unitree_g1_asset(root: Path) -> Path | None:
     base = root.expanduser()
-    for relative in (*UNITREE_G1_USD_RELATIVE_PATHS, *UNITREE_G1_URDF_RELATIVE_PATHS):
+    for relative in UNITREE_G1_USD_RELATIVE_PATHS:
         candidate = base / relative
         if candidate.is_file():
             return candidate
-    for pattern in ("**/g1.usd", "**/g1_minimal.usd", "**/g1_29dof.urdf", "**/g1_23dof.urdf"):
+    for pattern in ("**/g1*.usd", "**/*g1*.usd", "**/G1*.usd", "**/*G1*.usd"):
+        for candidate in sorted(base.glob(pattern)):
+            if candidate.is_file():
+                return candidate
+    for relative in UNITREE_G1_URDF_RELATIVE_PATHS:
+        candidate = base / relative
+        if candidate.is_file():
+            return candidate
+    for pattern in ("**/g1_29dof.urdf", "**/g1_23dof.urdf", "**/*g1*.urdf"):
         for candidate in sorted(base.glob(pattern)):
             if candidate.is_file():
                 return candidate
@@ -113,9 +138,16 @@ def write_unitree_g1_manifest(manifest: UnitreeG1AssetManifest) -> Path:
 
 def load_unitree_g1_manifest(path: Path) -> UnitreeG1AssetManifest:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    root = path.parent
+    relative_path = payload.get("asset_relative_path")
+    asset_path = root / relative_path if relative_path else Path(payload["asset_path"])
+    if not asset_path.is_file() and not relative_path:
+        discovered = find_unitree_g1_asset(root)
+        if discovered is not None:
+            asset_path = discovered
     manifest = UnitreeG1AssetManifest(
-        root=Path(payload["root"]),
-        asset_path=Path(payload["asset_path"]),
+        root=root,
+        asset_path=asset_path,
         asset_kind=str(payload["asset_kind"]),
         source=str(payload["source"]),
     )
