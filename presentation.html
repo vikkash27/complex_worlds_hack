@@ -413,7 +413,7 @@
 <div class="grid-overlay"></div>
 
 <div class="progress-line" id="progressLine"></div>
-<div class="slide-num-badge" id="slideNumBadge">01 / 03</div>
+<div class="slide-num-badge" id="slideNumBadge">01 / 04</div>
 
 <div class="deck" id="deck">
 
@@ -615,6 +615,29 @@
     </div>
   </div><!-- /slide-3 -->
 
+  <!-- ══════ SLIDE 4 — RESEARCH PAPER ══════ -->
+  <div class="slide" id="slide-4">
+    <div class="slide-inner">
+      <div class="s-header" style="text-align: center;">
+        <span style="font-size: 3rem; margin-bottom: 1rem; display: inline-block;">📄</span>
+        <h2 class="s-title">Read Our Paper</h2>
+        <p class="s-subtitle" style="margin: 0 auto; line-height: 1.8;">
+          We summarized our findings, methodology, and empirical evidence comparing dense vs sparse rewards.<br/>
+          <strong>paper_v8.pdf</strong> is included directly in our repository.
+        </p>
+      </div>
+
+      <div style="margin-top: 2rem; text-align: center; animation: fadeUp 0.6s ease-out 0.2s both;">
+        <a href="paper_v8.pdf" target="_blank" style="display: inline-block; position: relative; border-radius: 12px; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1); background-color: #ffffff;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 15px 50px rgba(92,200,250,0.2), 0 0 0 1px rgba(92,200,250,0.5)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)';">
+          <img src="paper_preview.png" alt="Paper Preview" style="display: block; width: 100%; max-width: 600px; max-height: 52vh; object-fit: cover; object-position: top; padding: 2rem 2rem 4rem 2rem;" />
+          <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 0.8rem; background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%); color: #fff; font-size: 0.85rem; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+            Click to open PDF
+          </div>
+        </a>
+      </div>
+    </div>
+  </div><!-- /slide-4 -->
+
 </div><!-- /deck -->
 
 <!-- Navigation -->
@@ -626,7 +649,7 @@
 <div class="key-hint"><kbd>←</kbd> <kbd>→</kbd> to navigate</div>
 
 <script>
-  const TOTAL = 3;
+  const TOTAL = 4;
   let current = 0, animating = false;
 
   const slides   = document.querySelectorAll('.slide');
