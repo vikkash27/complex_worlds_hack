@@ -5,7 +5,7 @@ from robocerebra_rl.isaac_scene import (
     make_humanoid_showcase_scene_plan,
 )
 from robocerebra_rl.world import ACTIONS, TASK_LIBRARY, BreakfastTrayWorld
-from scripts.isaac.replay_breakfast_tray import load_trace_events, should_use_humanoid_showcase
+from scripts.isaac.replay_breakfast_tray import asset_candidates_custom_data, load_trace_events, should_use_humanoid_showcase
 from scripts.run_demo import generate_humanoid_showcase_trace
 
 
@@ -53,3 +53,12 @@ def test_humanoid_trace_is_detected_by_isaac_replay(tmp_path):
 
     assert should_use_humanoid_showcase(events) is True
     assert len(events) >= 100
+
+
+def test_asset_candidates_custom_data_is_usd_safe_json_string():
+    candidates = ("/Isaac/Robots/Unitree/H1/h1.usd", "/Isaac/Robots/IsaacSim/Humanoid/humanoid.usd")
+
+    custom_data = asset_candidates_custom_data(candidates)
+
+    assert isinstance(custom_data, str)
+    assert json.loads(custom_data) == list(candidates)

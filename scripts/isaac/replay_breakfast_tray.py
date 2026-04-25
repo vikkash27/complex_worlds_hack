@@ -39,6 +39,11 @@ def should_use_humanoid_showcase(events: list[dict[str, object]]) -> bool:
     )
 
 
+def asset_candidates_custom_data(candidates: tuple[str, ...]) -> str:
+    """Serialize asset candidates as a USD-safe scalar custom data value."""
+    return json.dumps(list(candidates))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Replay RoboCerebra traces in Isaac Sim.")
     parser.add_argument("--baseline-trace", type=Path, required=True)
@@ -70,6 +75,11 @@ def main() -> None:
         baseline = [str(event["action"]) for event in baseline_events if event.get("tool_name") == "execute_skill" and event.get("action")]
         trained = [str(event["action"]) for event in trained_events if event.get("tool_name") == "execute_skill" and event.get("action")]
         use_humanoid = args.humanoid_showcase or should_use_humanoid_showcase(baseline_events + trained_events)
+        print(
+            f"[replay] building {'humanoid' if use_humanoid else 'mobile robot'} scene "
+            f"from {len(baseline_events)} baseline events and {len(trained_events)} trained events",
+            flush=True,
+        )
         scene_plan = (
             make_humanoid_showcase_scene_plan(baseline_events=baseline_events, trained_events=trained_events)
             if use_humanoid
@@ -86,7 +96,9 @@ def main() -> None:
 
         args.output_dir.mkdir(parents=True, exist_ok=True)
         usd_path = args.output_dir / ("humanoid_openreward_showcase.usda" if use_humanoid else "breakfast_tray_side_by_side.usda")
-        stage.GetRootLayer().Export(str(usd_path))
+        export_ok = stage.GetRootLayer().Export(str(usd_path))
+        if not export_ok:
+            raise RuntimeError(f"Isaac USD export returned false for {usd_path}")
         summary = {
             "baseline_actions": baseline,
             "trained_actions": trained,
@@ -103,7 +115,7 @@ def main() -> None:
             json.dumps(summary, indent=2),
             encoding="utf-8",
         )
-        print(usd_path)
+        print(f"[replay] wrote {usd_path}", flush=True)
     finally:
         simulation_app.close()
 
@@ -197,7 +209,7 @@ def _add_asset_reference(
 
     prim = stage.DefinePrim(path, "Xform")
     prim.SetCustomDataByKey("fallback", "Colored proxy geometry is shown if referenced Isaac assets do not resolve.")
-    prim.SetCustomDataByKey("asset_candidates", list(candidates))
+    prim.SetCustomDataByKey("asset_candidates_json", asset_candidates_custom_data(candidates))
     if candidates:
         prim.GetReferences().AddReference(candidates[0])
     xformable = UsdGeom.Xformable(prim)
@@ -218,9 +230,9 @@ def _write_humanoid_stage(stage, scene_plan: HumanoidShowcaseScenePlan, material
     _add_cube(stage, "/World/LabFloor", (0.0, 0.0, -0.025), (4.4, 3.2, 0.025), materials["lab_floor"])
     _add_cube(stage, "/World/MetricWall", (0.0, 1.55, 1.2), (4.1, 0.04, 1.2), materials["glass_cyan"])
     for x, station in [(-1.7, "pantry"), (-0.85, "counter"), (0.0, "sink"), (0.85, "table"), (1.7, "delivery")]:
+        stage.DefinePrim(f"/World/Stations/{station}", "Xform").SetDisplayName(station.title())
         _add_cube(stage, f"/World/Stations/{station}/Platform", (x, 0.15, 0.25), (0.36, 0.48, 0.06), materials["humanoid_silver"])
         _add_cube(stage, f"/World/Stations/{station}/Beacon", (x, -0.45, 0.62), (0.045, 0.045, 0.32), materials["warning_amber"])
-        stage.GetPrimAtPath(f"/World/Stations/{station}").SetDisplayName(station.title())
     _write_humanoid_actor(stage, "/World/BaselineHumanoid", scene_plan.baseline_events, -0.78, materials["baseline_red"], scene_plan)
     _write_humanoid_actor(stage, "/World/TrainedHumanoid", scene_plan.trained_events, 0.78, materials["policy_blue"], scene_plan)
 
@@ -273,6 +285,7 @@ def materials_or_default(material: object) -> object:
 
 def _add_task_station(stage, task, materials: dict[str, object]) -> None:
     x = task.x_offset
+    stage.DefinePrim(f"/World/Stations/{task.name}", "Xform").SetDisplayName(task.label)
     _add_cube(stage, f"/World/Stations/{task.name}/Counter", (x, 0.0, 0.38), (0.55, 1.18, 0.08), materials["counter_gray"])
     _add_cube(stage, f"/World/Stations/{task.name}/Accent", (x, 0.0, 0.48), (0.5, 1.1, 0.015), materials[task.accent_material])
     _add_cube(
@@ -282,7 +295,6 @@ def _add_task_station(stage, task, materials: dict[str, object]) -> None:
         (0.035, 0.035, 0.38),
         materials[task.accent_material],
     )
-    stage.GetPrimAtPath(f"/World/Stations/{task.name}").SetDisplayName(task.label)
 
 
 def _write_lane(stage, root: str, actions: list[str], lane, materials: dict[str, object]) -> None:
