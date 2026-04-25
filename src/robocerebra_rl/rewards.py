@@ -42,8 +42,8 @@ def default_symbolic_vlm_score(payload: dict[str, object]) -> GeminiScore:
         "confidence": 0.72 if complete else 0.55,
         "rationale": (
             "Cached symbolic fallback: using simulator progress_delta as the VLM proxy. "
-            "Set ROBOCEREBRA_USE_GEMINI_VISION=1 and GEMINI_API_KEY (or GOOGLE_API_KEY) "
-            "to call Gemini for score_progress."
+            "Set GEMINI_API_KEY or GOOGLE_API_KEY to call Gemini for score_progress. "
+            "Set ROBOCEREBRA_FORCE_SYMBOLIC_VLM=1 to force this path even when a key is present."
         ),
     }
 
@@ -135,6 +135,22 @@ class GeminiRewardCache:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("w", encoding="utf-8") as file:
             json.dump(self._cache, file, indent=2, sort_keys=True)
+
+
+def vlm_scoring_mode() -> str:
+    """How VLM scoring will behave for `score_progress` / GeminiRewardCache."""
+    if os.getenv("ROBOCEREBRA_FORCE_SYMBOLIC_VLM") == "1":
+        return "symbolic_forced"
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        return "live_gemini"
+    return "symbolic"
+
+
+def resolve_vlm_scorer() -> Callable[[dict[str, object]], GeminiScore]:
+    """Scorer passed to GeminiRewardCache: live Gemini when a key is set, unless forced symbolic."""
+    if os.getenv("ROBOCEREBRA_FORCE_SYMBOLIC_VLM") == "1":
+        return default_symbolic_vlm_score
+    return gemini_reward_scorer()
 
 
 def gemini_reward_scorer(model: str | None = None) -> Callable[[dict[str, object]], GeminiScore]:

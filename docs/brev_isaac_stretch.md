@@ -44,6 +44,36 @@ the benchmark story:
 If Isaac setup works, describe it as a visualization stretch. The verifiable
 benchmark remains the OpenReward environment and its generated metrics.
 
+## MuJoCo G1 fallback showcase
+
+If Isaac USD animation is not convincing, use the MuJoCo side-by-side offline
+showcase. It is driven by the same RoboCerebra/OpenReward JSONL traces, but it
+maps the trace segments directly to Unitree G1 joint targets and writes a GIF.
+
+```bash
+cd ~/complex_worlds_hack
+bash scripts/mujoco/run_g1_showcase.sh
+```
+
+Outputs:
+
+- `artifacts/mujoco/g1_openreward_showcase.gif`
+- `artifacts/mujoco/g1_openreward_showcase_summary.json`
+
+For a forced no-MuJoCo storyboard render that still shows the OpenReward
+baseline/optimized difference:
+
+```bash
+.venv/bin/python scripts/mujoco/render_g1_showcase.py --backend storyboard
+```
+
+For real MuJoCo rendering, install `mujoco` into the venv and use:
+
+```bash
+.venv/bin/python -m pip install mujoco
+.venv/bin/python scripts/mujoco/render_g1_showcase.py --backend mujoco
+```
+
 ## Unitree G1 fetch: `Permission denied` under `artifacts/isaac/vendor`
 
 If `python scripts/isaac/fetch_unitree_g1_assets.py` fails with **Permission

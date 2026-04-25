@@ -755,7 +755,10 @@ class ShiftWorld:
             "progress_delta": progress_after,
             "confidence": 0.65,
             "subgoal": subgoal,
-            "rationale": "Symbolic shift-VLM proxy (set ROBOCEREBRA_USE_GEMINI_VISION=1 for live).",
+            "rationale": (
+                "Symbolic shift-VLM proxy before cache merge; live Gemini used when "
+                "GEMINI_API_KEY is set (see env.score_progress + GeminiRewardCache)."
+            ),
         }
 
     def log_job(self, summary: str) -> dict[str, Any]:

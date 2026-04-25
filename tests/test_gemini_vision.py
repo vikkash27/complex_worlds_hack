@@ -1,7 +1,12 @@
 import google.genai
 import pytest
 
-from robocerebra_rl.rewards import build_gemini_reward_contents, gemini_reward_scorer, parse_gemini_score
+from robocerebra_rl.rewards import (
+    build_gemini_reward_contents,
+    gemini_reward_scorer,
+    parse_gemini_score,
+    vlm_scoring_mode,
+)
 
 
 def test_gemini_reward_contents_include_image_bytes_when_available(tmp_path):
@@ -34,6 +39,17 @@ def test_parse_gemini_score_recovers_json_wrapped_in_markdown():
     assert score["progress_delta"] == 0.5
     assert score["subgoal_complete"] is True
     assert score["confidence"] == 0.82
+
+
+def test_vlm_scoring_mode_follows_key_and_force(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("ROBOCEREBRA_FORCE_SYMBOLIC_VLM", raising=False)
+    assert vlm_scoring_mode() == "symbolic"
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    assert vlm_scoring_mode() == "live_gemini"
+    monkeypatch.setenv("ROBOCEREBRA_FORCE_SYMBOLIC_VLM", "1")
+    assert vlm_scoring_mode() == "symbolic_forced"
 
 
 def test_gemini_reward_scorer_without_api_key_is_symbolic(monkeypatch):
@@ -104,8 +120,7 @@ def test_gemini_reward_scorer_with_api_key_calls_genai_client(monkeypatch, tmp_p
 
 
 @pytest.mark.asyncio
-async def test_env_uses_gemini_scorer_when_flag_set(tmp_path, monkeypatch):
-    monkeypatch.setenv("ROBOCEREBRA_USE_GEMINI_VISION", "1")
+async def test_env_score_progress_uses_vlm_cache_scorer(tmp_path, monkeypatch):
     monkeypatch.setenv("ROBOCEREBRA_OBSERVATION_IMAGE_DIR", str(tmp_path))
     monkeypatch.setenv("ROBOCEREBRA_REWARD_CACHE", str(tmp_path / "vlm_cache.json"))
     monkeypatch.setenv("GEMINI_API_KEY", "fake")
@@ -126,7 +141,7 @@ async def test_env_uses_gemini_scorer_when_flag_set(tmp_path, monkeypatch):
             "rationale": "Stub VLM: integration path exercised.",
         }
 
-    monkeypatch.setattr("robocerebra_rl.env.gemini_reward_scorer", lambda model=None: stub_scorer)
+    monkeypatch.setattr("robocerebra_rl.env.resolve_vlm_scorer", lambda: stub_scorer)
 
     env = RoboCerebraShiftEnv(RoboCerebraShiftEnv.list_tasks("train")[0])
     ticket = (await env.read_ticket()).metadata["ticket"]

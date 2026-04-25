@@ -184,10 +184,10 @@ set -a && source .env && set +a
   --output artifacts/openreward/hosted_reactive_vs_expert_results.json
 ```
 
-For **live** Gemini on `score_progress`, set `ROBOCEREBRA_USE_GEMINI_VISION=1`,
-`GEMINI_API_KEY` (or `GOOGLE_API_KEY`), and optionally `GEMINI_MODEL` (default
-`gemini-2.5-flash`). Without the vision flag or key, scoring uses the deterministic
-symbolic fallback (still exercised by `--score-progress` for metrics shape).
+For **live** Gemini on `score_progress`, set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and
+optionally `GEMINI_MODEL` (default `gemini-2.5-flash`). Set `ROBOCEREBRA_FORCE_SYMBOLIC_VLM=1`
+to force the deterministic symbolic scorer. Without a key, scoring uses the symbolic
+fallback (still exercised by `--score-progress` for metrics shape).
 
 When you pass `--compare-policy`, the script also emits
 `artifacts/openreward/submission_benchmark_summary.json` with both policies'
@@ -219,3 +219,29 @@ versus the optimized smooth chain. For real MuJoCo rendering:
 .venv/bin/python -m pip install mujoco
 .venv/bin/python scripts/mujoco/render_g1_showcase.py --backend mujoco
 ```
+
+### 5.1 Interactive 3D demo (not a GIF)
+
+The GIF pipeline uses kinematic keyframes. For a **live MuJoCo Simulate window** with
+`mj_step`, position (PD) actuators toward the trace, **measured** weld relpose when grasp
+latches, and a pinned floating base so the robot does not drift away, run from the same repo:
+
+```bash
+cd /path/to/complex_worlds
+.venv/bin/python scripts/mujoco/view_dynamic_grasp.py \
+  --trace artifacts/traces/humanoid_trained_long_horizon.jsonl
+```
+
+This opens the default macOS/Windows **MuJoCo viewer** (same stack as
+`mujoco.viewer.launch_passive`). On **macOS**, MuJoCo requires `mjpython` for the viewer; the
+script re-invokes `.venv/bin/mjpython` automatically, or you can run
+`.venv/bin/mjpython scripts/mujoco/view_dynamic_grasp.py` yourself. No WebRTC: this runs
+**on the machine** where the command executes. Use `--lane baseline` for the stall/recovery
+policy. Headless / CI smoke (no window):
+
+```bash
+.venv/bin/python scripts/mujoco/view_dynamic_grasp.py --headless
+```
+
+For Brev, you typically need a virtual display (e.g. Xvfb) or run headless, then download a
+**GIF** from `render_g1_showcase.py` for presentation video instead.

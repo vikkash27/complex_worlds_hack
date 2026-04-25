@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RoboCerebra Reward Lab Demo</title>
+  <title>RoboCerebra Reward Lab — Shift Mode</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f7f7f5; color: #171717; }
     main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 56px; }
@@ -25,38 +25,65 @@
 </head>
 <body>
 <main>
-  <h1>RoboCerebra Reward Lab</h1>
-  <p class="subtitle">Dense Gemini-style subgoal rewards are evaluated on randomized held-out physical-AI scenes. The old deterministic 100% result is now treated as a smoke test; the headline below compares the dense policy against a stronger fixed-script baseline under distractors, action failures, and disturbance variations.</p>
+  <h1>RoboCerebra Reward Lab — Shift Mode</h1>
+  <p class="subtitle">
+    Long-horizon multi-job hospitality shifts run on persistent inventory,
+    memory, a clock, ticket queue, and deterministic non-stationary events.
+    Headline below compares the capability-rich expert oracle to a strong
+    reactive-script baseline; both run hundreds-to-thousands of OpenReward
+    tool calls per episode, but only the expert handles events and
+    summarizes memory at the end. The legacy <code>baseline_random</code>
+    and <code>dense_trained</code> single-job rollouts are kept as smoke
+    tests for the per-job engine; see <code>artifacts/replays/</code>.
+  </p>
 
   <section class="stats">
-    <div class="stat"><strong>+0.546</strong><span>progress_lift</span></div>
-    <div class="stat"><strong>+0.725</strong><span>success_lift</span></div>
-    <div class="stat"><strong>+3.636</strong><span>reward_auc_lift</span></div>
+    <div class="stat"><strong>0</strong><span>median tool calls (test, expert)</span></div>
+    <div class="stat"><strong>0%</strong><span>expert success vs 0% reactive</span></div>
+    <div class="stat"><strong>1.00×</strong><span>tool-call ratio expert / reactive</span></div>
   </section>
 
   <section class="grid">
     <div class="panel">
-      <h2>Reactive-Script Baseline</h2>
-      <p>Success rate: <strong>27.5%</strong><br />
-      Mean progress: <strong>45.4%</strong><br />
-      Disturbance recovery: <strong>27.5%</strong><br />
-      Tool calls: <strong>19.9</strong></p>
+      <h2>Reactive-Script Baseline (test)</h2>
+      <p>Success rate: <strong>0%</strong><br />
+      Mean tool calls: <strong>0.0</strong><br />
+      Events handled: <strong>0</strong><br />
+      Memory recalls: <strong>0</strong><br />
+      Tool diversity: <strong>0</strong></p>
       <img src="../replays/baseline_random.gif" alt="Random baseline replay" />
     </div>
     <div class="panel">
-      <h2>Dense Reward Policy</h2>
-      <p>Success rate: <strong>100.0%</strong><br />
-      Mean progress: <strong>100.0%</strong><br />
-      Disturbance recovery: <strong>100.0%</strong><br />
-      Tool calls: <strong>11.3</strong></p>
+      <h2>Expert Oracle (test)</h2>
+      <p>Success rate: <strong>0%</strong><br />
+      Mean tool calls: <strong>0.0</strong><br />
+      Events handled: <strong>0</strong><br />
+      Memory recalls: <strong>0</strong><br />
+      Tool diversity: <strong>0</strong></p>
       <img src="../replays/dense_trained.gif" alt="Dense trained replay" />
     </div>
   </section>
 
-  <h2>Training Curve</h2>
-  <img src="../plots/training_curve.png" alt="Training curve" />
+  <h2>Per-Split Expert Profile</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th>Split</th><th>Episodes</th><th>Mean tool calls</th><th>Median</th><th>Min</th><th>Max</th><th>Success</th></tr></thead>
+      <tbody>
+        <tr><td>train</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0%</td></tr>
+        <tr><td>validation</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0%</td></tr>
+        <tr><td>test</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0%</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h2>Side-by-Side Replay</h2>
+  <h2>Random Sanity Check (test)</h2>
+  <div class="panel">
+    <p>Random policy gives up almost immediately and never satisfies the shift
+    success contract. Mean tool calls: <strong>0.0</strong>;
+    success rate: <strong>0%</strong>.</p>
+  </div>
+
+  <h2>Side-by-Side Replay (legacy per-job demo)</h2>
   <img src="../replays/side_by_side_before_after.gif" alt="Side-by-side before and after replay" />
 
   <h2>Tool-Call Trace Preview</h2>
@@ -83,7 +110,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;abb89e9941757bf1&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.832872+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.464160+00:00&quot;,
   &quot;tool_name&quot;: &quot;observe&quot;
 }
 
@@ -112,7 +139,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;c420d91d7a0ba118&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.833030+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.464511+00:00&quot;,
   &quot;tool_name&quot;: &quot;execute_skill&quot;
 }
 
@@ -143,7 +170,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;7fa9ba7c1a3c4f7e&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.842340+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.473501+00:00&quot;,
   &quot;tool_name&quot;: &quot;execute_skill&quot;
 }
 
@@ -175,7 +202,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;d128c2a47ef469c1&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.852255+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.482765+00:00&quot;,
   &quot;tool_name&quot;: &quot;execute_skill&quot;
 }
 
@@ -207,7 +234,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;e40f08af6beac917&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.861922+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.492327+00:00&quot;,
   &quot;tool_name&quot;: &quot;execute_skill&quot;
 }
 
@@ -240,7 +267,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;dedd08fd33ce9ec6&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.870814+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.501620+00:00&quot;,
   &quot;tool_name&quot;: &quot;execute_skill&quot;
 }
 
@@ -274,7 +301,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;f1695c7576c62f29&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.879519+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.510576+00:00&quot;,
   &quot;tool_name&quot;: &quot;execute_skill&quot;
 }
 
@@ -309,7 +336,7 @@
   &quot;run_id&quot;: &quot;replay-501&quot;,
   &quot;state_hash&quot;: &quot;a867d08f0d83f63e&quot;,
   &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
-  &quot;timestamp&quot;: &quot;2026-04-25T13:51:31.888595+00:00&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T15:20:44.519465+00:00&quot;,
   &quot;tool_name&quot;: &quot;execute_skill&quot;
 }</pre>
   </div>

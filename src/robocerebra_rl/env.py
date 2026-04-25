@@ -20,7 +20,7 @@ from openreward.environments import (
 from pydantic import BaseModel, Field
 
 from robocerebra_rl.render import render_world
-from robocerebra_rl.rewards import GeminiRewardCache, gemini_reward_scorer
+from robocerebra_rl.rewards import GeminiRewardCache, resolve_vlm_scorer
 from robocerebra_rl.shift import (
     SHIFT_TOOL_NAMES,
     ShiftSpec,
@@ -111,9 +111,8 @@ class RoboCerebraShiftEnv(Environment):
         spec = task_spec or {}
         shift_spec = self._resolve_shift_spec(spec)
         self.shift = ShiftWorld(spec=shift_spec)
-        scorer = gemini_reward_scorer() if os.getenv("ROBOCEREBRA_USE_GEMINI_VISION") == "1" else None
         cache_path = os.getenv("ROBOCEREBRA_REWARD_CACHE", ".openreward/gemini_reward_cache.json")
-        self.reward_cache = GeminiRewardCache(cache_path, scorer=scorer)
+        self.reward_cache = GeminiRewardCache(cache_path, scorer=resolve_vlm_scorer())
         trace_path = spec.get("trace_path") or os.getenv("ROBOCEREBRA_TRACE_PATH")
         if not trace_path:
             trace_path = f".openreward/traces/{shift_spec.shift_id}.jsonl"

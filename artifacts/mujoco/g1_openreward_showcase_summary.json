@@ -1,0 +1,15 @@
+{
+  "baseline_execute_skill_calls": 34,
+  "optimized_execute_skill_calls": 30,
+  "baseline_failed_execute_calls": 4,
+  "optimized_failed_execute_calls": 0,
+  "baseline_recovery_execute_calls": 4,
+  "optimized_recovery_execute_calls": 0,
+  "baseline_total_tool_calls": 133,
+  "optimized_total_tool_calls": 121,
+  "backend": "mujoco",
+  "scene": "/Users/vikkash/dev/complex_worlds/artifacts/mujoco/vendor/mujoco_menagerie/unitree_g1/robocerebra_task_showcase.xml",
+  "gif": "/Users/vikkash/dev/complex_worlds/artifacts/mujoco/g1_openreward_showcase.gif",
+  "frames": 96,
+  "fps": 12
+}

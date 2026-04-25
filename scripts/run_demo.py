@@ -23,7 +23,7 @@ load_dotenv(override=False)
 from robocerebra_rl.eval import compare_policies, evaluate_policy
 from robocerebra_rl.world import randomized_world
 from robocerebra_rl.render import render_world, save_replay
-from robocerebra_rl.rewards import GeminiRewardCache, gemini_reward_scorer, symbolic_dense_reward
+from robocerebra_rl.rewards import GeminiRewardCache, resolve_vlm_scorer, symbolic_dense_reward, vlm_scoring_mode
 from robocerebra_rl.trace import ToolTraceLogger
 from robocerebra_rl.train import train_tabular_policy
 from robocerebra_rl.world import BreakfastTrayWorld, iter_policy_actions
@@ -209,16 +209,21 @@ def write_plot(history: dict[str, object], baseline_reward: float, path: Path) -
 
 
 def score_sample_transition(path: Path) -> dict[str, object]:
+    """One `score_progress`-style VLM call with a rendered breakfast-tray frame (for demos)."""
     world = BreakfastTrayWorld(seed=42)
     transition = world.step("locate_items")
-    scorer = gemini_reward_scorer() if os.getenv("ROBOCEREBRA_USE_GEMINI_VISION") == "1" else None
-    cache = GeminiRewardCache(path, scorer=scorer)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frame_path = path.parent / "gemini_demo_frame.png"
+    render_world(world, frame_path)
+    cache = GeminiRewardCache(path, scorer=resolve_vlm_scorer())
     return cache.score(
         world.task.task_id,
         transition.state_hash,
         "locate_items",
         "locate_items",
         progress_delta=transition.progress_delta,
+        image_path=str(frame_path),
     )
 
 
@@ -296,6 +301,10 @@ def main() -> None:
         "benchmark": "RoboCerebra Reward Lab",
         "task": "breakfast_tray_disturbance",
         "result_type": "randomized_heldout_benchmark",
+        "vlm_scoring": {
+            "mode": vlm_scoring_mode(),
+            "demo_frame": str(cache_dir / "gemini_demo_frame.png"),
+        },
         "deterministic_smoke_test": {
             "random_baseline": smoke_random_metrics,
             "dense_trained_policy": smoke_trained_metrics,
@@ -360,6 +369,7 @@ def main() -> None:
     )
 
     print("RoboCerebra Reward Lab demo artifacts written:")
+    print(f"- VLM scoring mode: {vlm_scoring_mode()} (set GEMINI_API_KEY for live Gemini)")
     print(f"- {metrics_dir / 'leaderboard.json'}")
     print(f"- {plots_dir / 'training_curve.png'}")
     print(f"- {replays_dir / 'baseline_random.gif'}")
