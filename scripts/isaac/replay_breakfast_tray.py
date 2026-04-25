@@ -60,6 +60,7 @@ def main() -> None:
         import omni.usd  # type: ignore[import-not-found]
 
         stage = omni.usd.get_context().get_stage()
+        _ensure_world_root(stage)
         stage.SetStartTimeCode(0)
         stage.SetTimeCodesPerSecond(24)
         UsdGeom.SetStageMetersPerUnit(stage, 1.0)
@@ -159,6 +160,14 @@ def _add_camera(stage, scene_plan: ShowcaseScenePlan) -> None:
     camera.AddRotateXYZOp().Set(Gf.Vec3f(58.0, 0.0, 33.0))
     camera.GetFocalLengthAttr().Set(scene_plan.camera.focal_length)
     stage.SetDefaultPrim(stage.GetPrimAtPath("/World"))
+
+
+def _ensure_world_root(stage) -> None:
+    """Ensure /World exists before we set default prim or define children."""
+    from pxr import UsdGeom  # type: ignore[import-not-found]
+
+    if not stage.GetPrimAtPath("/World").IsValid():
+        UsdGeom.Xform.Define(stage, "/World")
 
 
 def _add_cube(
