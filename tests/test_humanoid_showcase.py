@@ -1,9 +1,7 @@
 import json
 
-from robocerebra_rl.isaac_scene import (
-    humanoid_asset_candidates,
-    make_humanoid_showcase_scene_plan,
-)
+from robocerebra_rl.isaac_assets import UnitreeG1AssetManifest, write_unitree_g1_manifest
+from robocerebra_rl.isaac_scene import humanoid_asset_candidates, make_humanoid_showcase_scene_plan
 from robocerebra_rl.world import ACTIONS, TASK_LIBRARY, BreakfastTrayWorld
 from scripts.isaac.replay_breakfast_tray import asset_candidates_custom_data, load_trace_events, should_use_humanoid_showcase
 from scripts.run_demo import generate_humanoid_showcase_trace
@@ -26,6 +24,20 @@ def test_robocerebra_humanoid_usd_override_prepends(monkeypatch):
     monkeypatch.setenv("ROBOCEREBRA_HUMANOID_USD", "/workspace/artifacts/isaac/robots/g1.usd")
     candidates = humanoid_asset_candidates()
     assert candidates[0] == "/workspace/artifacts/isaac/robots/g1.usd"
+    assert "/Isaac/Robots/Unitree/G1/g1.usd" in candidates
+
+
+def test_local_unitree_asset_manifest_is_preferred(monkeypatch, tmp_path):
+    asset = tmp_path / "unitree_model" / "G1" / "g1.usd"
+    asset.parent.mkdir(parents=True)
+    asset.write_text("#usda 1.0", encoding="utf-8")
+    write_unitree_g1_manifest(UnitreeG1AssetManifest.from_asset(root=tmp_path, asset_path=asset, source="unitree_model"))
+    monkeypatch.delenv("ROBOCEREBRA_HUMANOID_USD", raising=False)
+    monkeypatch.setenv("ROBOCEREBRA_UNITREE_ASSET_DIR", str(tmp_path))
+
+    candidates = humanoid_asset_candidates()
+
+    assert candidates[0] == str(asset)
     assert "/Isaac/Robots/Unitree/G1/g1.usd" in candidates
 
 

@@ -35,9 +35,11 @@ Build a browser report from those artifacts:
 open artifacts/visual_report/index.html
 ```
 
-Set `GEMINI_API_KEY` or `GOOGLE_API_KEY` to use Gemini for reward scoring. Without
-an API key, the project uses a deterministic symbolic fallback and records that in
-the reward rationale so the demo remains runnable.
+Optional **live** Gemini vision for `score_progress`: set **`ROBOCEREBRA_USE_GEMINI_VISION=1`**
+plus **`GEMINI_API_KEY`** or **`GOOGLE_API_KEY`**, and optionally **`GEMINI_MODEL`**
+(default `gemini-2.5-flash`). Without that flag (or without a key), `score_progress`
+uses a deterministic symbolic fallback and states that in the rationale so demos
+stay reproducible offline.
 
 ## OpenReward Environment
 

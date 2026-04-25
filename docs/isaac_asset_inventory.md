@@ -1,15 +1,16 @@
 # Isaac Asset Inventory
 
-This project uses a hybrid asset strategy for the hackathon demo:
+This project uses a local-first asset strategy for the hackathon demo:
 
-1. Try built-in Isaac/Omniverse assets from the container or streamed content browser.
-2. Fall back to colored USD proxy geometry when those assets are unavailable.
+1. Fetch official Unitree assets into `artifacts/isaac/vendor/unitree/`.
+2. Validate the local G1 asset before generating the humanoid replay.
+3. Use built-in Isaac/Omniverse paths only as non-primary backup candidates.
 
 Candidate categories are encoded in `src/robocerebra_rl/isaac_scene.py`:
 
 - `mobile_base`: Carter or Jackal-style mobile robot assets.
 - `manipulator`: Franka or UR10-style manipulator assets.
-- `humanoid`: Unitree **G1** first (`/Isaac/Robots/Unitree/G1/g1.usd`), then H1 and IsaacSim Humanoid. Set `ROBOCEREBRA_HUMANOID_USD` to a file path to bypass locked browser content.
+- `humanoid`: local official Unitree **G1** manifest first, then `/Isaac/Robots/Unitree/G1/g1.usd`, H1, and IsaacSim Humanoid. `scripts/isaac/run_humanoid_replay_in_container.sh` exports `ROBOCEREBRA_HUMANOID_USD` from the validated manifest.
 - `kitchen_props`: mug, food box, tray/countertop props.
 
-The fallback geometry is intentional: it keeps the replay deterministic on CI and on machines where the Isaac content cache differs. The Brev/Isaac smoke test should confirm whether the container can resolve the candidate assets and visually inspect the fallback quality.
+The humanoid block proxy is disabled by default because the hackathon replay should show the real Unitree G1. Enable `ROBOCEREBRA_HUMANOID_PROXY=1` only for debugging asset failures.

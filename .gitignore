@@ -9,3 +9,4 @@ node_modules/
 dashboard/dist/
 dashboard/node_modules/
 .env
+artifacts/isaac/vendor/

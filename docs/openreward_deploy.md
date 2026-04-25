@@ -121,3 +121,58 @@ policies' metrics and the lift summary for judges.
 Before hosted deployment is linked, test the same script against the local
 server by passing `--base-url http://127.0.0.1:8080` and `--environment
 robocerebra_reward_lab`.
+
+## If the Tasks table still shows only a handful of rows
+
+The dashboard counts should match what the **hosted** API returns from
+`list_tasks`. Your local checkout should print **76 / 16 / 16** (108 total):
+
+```bash
+.venv/bin/python -c "from robocerebra_rl.env import RoboCerebraRewardLabEnv as E; \
+print('train', len(E.list_tasks('train')), 'val', len(E.list_tasks('validation')), \
+'test', len(E.list_tasks('test')))"
+```
+
+Compare with **hosted** (same `OPENREWARD_API_KEY` as `orwd`; replace the env id):
+
+```bash
+set -a && source .env && set +a
+.venv/bin/python -c "
+from openreward import OpenReward
+name = 'vikkash/complex_worlds_hack'  # your namespace/env
+env = OpenReward().environments.get(name=name)
+for split in ('train', 'validation', 'test'):
+    n = len(list(env.list_tasks(split=split)))
+    print(split, n)
+"
+```
+
+- If **local** is 76/16/16 but **hosted** is still ~3/1/3, the linked GitHub
+  repo/branch does not contain your latest commit, or the deployment did not
+  finish successfully—check `orwd logs <env> --build` and the repo’s default
+  branch on GitHub.
+- Confirm the browser page is the **same** environment slug you linked (not
+  another project such as a different hackathon env).
+
+### Why “Task Images” is empty on a deployment
+
+The **Task Images** tab is for **Harbor** environments: OpenReward can build
+extra **per-task (sandbox) images** in that mode. The CLI describes
+`orwd task-builds` as listing those **harbor task image** builds.
+
+If you created the environment **without** Harbor (`orwd create` without
+`--harbor`, which is the usual case for a single-Dockerfile server like this
+repo), **no task-image builds are expected**. Your tasks still come from
+`list_tasks` inside the main container at runtime. An empty Task Images tab is
+normal and **not** a sign that `list_tasks` failed.
+
+### Deploy “Completed” but the Overview Tasks table still looks wrong
+
+Use the **hosted** `num_tasks` / `list_tasks` check in the section above. If
+those return 76 / 16 / 16 but the web table does not, treat it as a UI or cache
+issue (hard refresh, private window, **Redeploy**).
+
+Also confirm GitHub’s **default branch** at the deployment commit actually
+contains the intended `OPENREWARD_SPLIT_SEEDS` in `src/robocerebra_rl/world.py`.
+If that commit exists only on a side branch, the image may not match your local
+checkout.

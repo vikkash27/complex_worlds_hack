@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+from robocerebra_rl.isaac_assets import find_unitree_g1_asset, load_unitree_g1_manifest
 
 
 ISAAC_ASSET_CANDIDATES: dict[str, tuple[str, ...]] = {
@@ -38,7 +41,27 @@ def humanoid_asset_candidates() -> tuple[str, ...]:
     override = os.environ.get("ROBOCEREBRA_HUMANOID_USD", "").strip()
     if override:
         return (override, *base)
+    local = local_unitree_g1_asset()
+    if local:
+        return (local, *base)
     return base
+
+
+def local_unitree_g1_asset() -> str | None:
+    root = Path(
+        os.environ.get(
+            "ROBOCEREBRA_UNITREE_ASSET_DIR",
+            str(Path(__file__).resolve().parents[2] / "artifacts" / "isaac" / "vendor" / "unitree"),
+        )
+    )
+    manifest_path = root / "unitree_g1_manifest.json"
+    try:
+        if manifest_path.is_file():
+            return str(load_unitree_g1_manifest(manifest_path).asset_path)
+        asset = find_unitree_g1_asset(root)
+        return str(asset) if asset is not None else None
+    except FileNotFoundError:
+        return None
 
 
 @dataclass(frozen=True)

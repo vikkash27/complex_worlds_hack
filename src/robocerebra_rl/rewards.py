@@ -41,8 +41,9 @@ def default_symbolic_vlm_score(payload: dict[str, object]) -> GeminiScore:
         "irreversible_error": False,
         "confidence": 0.72 if complete else 0.55,
         "rationale": (
-            "Cached symbolic fallback: progress is inferred from the simulator "
-            "state because GEMINI_API_KEY is not configured."
+            "Cached symbolic fallback: using simulator progress_delta as the VLM proxy. "
+            "Set ROBOCEREBRA_USE_GEMINI_VISION=1 and GEMINI_API_KEY (or GOOGLE_API_KEY) "
+            "to call Gemini for score_progress."
         ),
     }
 

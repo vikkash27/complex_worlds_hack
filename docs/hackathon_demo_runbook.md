@@ -74,12 +74,18 @@ Then in the streamed Isaac UI:
 ## 3b. Generate the humanoid long-horizon showcase USD
 
 The humanoid showcase uses the same OpenReward/RoboCerebra trace contract, but
-with a 100+ event long-horizon hospitality task. It references **Unitree G1**
-first (`/Isaac/Robots/Unitree/G1/g1.usd`), then other built-in humanoids. The
-content browser may show padlocks; USD still resolves those paths from the Isaac
-install. If not, set `ROBOCEREBRA_HUMANOID_USD` to a **file** path to a G1 USD you
-copied into the repo volume. Block “mocap” proxies are off by default; set
-`ROBOCEREBRA_HUMANOID_PROXY=1` only for debugging.
+with a 100+ event long-horizon hospitality task. It uses a **local official
+Unitree G1 asset**; do not rely on locked `/Isaac/...` browser folders for the
+main demo.
+
+First fetch and validate Unitree assets on the Brev host:
+
+```bash
+cd ~/complex_worlds_hack
+.venv/bin/python scripts/isaac/fetch_unitree_g1_assets.py
+```
+
+Then generate the USD inside the Isaac container:
 
 ```bash
 docker exec -it isaac-sim bash -lc 'bash /workspace/complex_worlds_hack/scripts/isaac/run_humanoid_replay_in_container.sh'
@@ -95,7 +101,28 @@ docker exec -it isaac-sim bash -lc 'cd /workspace/complex_worlds_hack && /isaac-
   --humanoid-showcase'
 ```
 
-The replay prepends `get_assets_root_path()` to `/Isaac/...` so the G1 USD actually loads in Kit; a bare `AddReference("/Isaac/...")` often shows nothing. Watch for log lines like `[replay] Isaac asset root: ...` and `humanoid (G1) AddReference: ... -> ...`.
+Run the smoke check before opening WebRTC:
+
+```bash
+docker exec -it isaac-sim bash -lc 'bash /workspace/complex_worlds_hack/scripts/isaac/smoke_humanoid_showcase_in_container.sh'
+```
+
+The smoke check verifies:
+
+- `artifacts/isaac/humanoid_openreward_showcase.usda` exists.
+- the USD references the validated local Unitree G1 asset.
+- the replay summary contains at least 100 tool calls.
+
+Optional articulation smoke test:
+
+```bash
+docker exec -it isaac-sim bash -lc 'cd /workspace/complex_worlds_hack && /isaac-sim/python.sh -u scripts/isaac/run_g1_articulation_policy.py'
+```
+
+This command validates whether the fetched G1 USD exposes discoverable hip,
+knee, ankle, shoulder, elbow, or waist joints and writes
+`artifacts/isaac/g1_articulation_policy.json`. If it fails, the asset is likely
+mesh-only or URDF-only and should not be used for the physics-policy claim.
 
 Then in the streamed Isaac UI:
 
@@ -166,7 +193,10 @@ set -a && source .env && set +a
   --output artifacts/openreward/hosted_reactive_vs_expert_results.json
 ```
 
-Set `ROBOCEREBRA_USE_GEMINI_VISION=1` and `GEMINI_MODEL=<available-model-id>` only when you want paid/nondeterministic Gemini vision scoring. Without those env vars, the same benchmark uses deterministic fallback scoring.
+For **live** Gemini on `score_progress`, set `ROBOCEREBRA_USE_GEMINI_VISION=1`,
+`GEMINI_API_KEY` (or `GOOGLE_API_KEY`), and optionally `GEMINI_MODEL` (default
+`gemini-2.5-flash`). Without the vision flag or key, scoring uses the deterministic
+symbolic fallback (still exercised by `--score-progress` for metrics shape).
 
 When you pass `--compare-policy`, the script also emits
 `artifacts/openreward/submission_benchmark_summary.json` with both policies'

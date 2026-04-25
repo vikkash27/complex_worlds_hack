@@ -18,6 +18,7 @@ from robocerebra_rl.isaac_scene import (
     make_humanoid_showcase_scene_plan,
     make_showcase_scene_plan,
 )
+from robocerebra_rl.humanoid_motion import compile_humanoid_motion, summarize_tool_trace
 
 
 def load_actions(path: Path) -> list[str]:
@@ -157,6 +158,11 @@ def main() -> None:
             "trained_actions": trained,
             "scene_title": scene_plan.title,
             "tasks": [task.label for task in scene_plan.tasks] if isinstance(scene_plan, ShowcaseScenePlan) else ["Humanoid hospitality lab"],
+            "tool_trace_summary": (
+                summarize_tool_trace([*scene_plan.baseline_events, *scene_plan.trained_events])
+                if isinstance(scene_plan, HumanoidShowcaseScenePlan)
+                else {}
+            ),
             "asset_candidates": ISAAC_ASSET_CANDIDATES,
             "usd": str(usd_path),
             "note": (
@@ -290,8 +296,31 @@ def _write_humanoid_stage(stage, scene_plan: HumanoidShowcaseScenePlan, material
         stage.DefinePrim(f"/World/Stations/{station}", "Xform").SetDisplayName(station.title())
         _add_cube(stage, f"/World/Stations/{station}/Platform", (x, 0.15, 0.25), (0.36, 0.48, 0.06), materials["humanoid_silver"])
         _add_cube(stage, f"/World/Stations/{station}/Beacon", (x, -0.45, 0.62), (0.045, 0.045, 0.32), materials["warning_amber"])
+    _write_humanoid_metrics(stage, scene_plan, materials)
     _write_humanoid_actor(stage, "/World/BaselineHumanoid", scene_plan.baseline_events, -0.78, materials["baseline_red"], scene_plan)
     _write_humanoid_actor(stage, "/World/TrainedHumanoid", scene_plan.trained_events, 0.78, materials["policy_blue"], scene_plan)
+
+
+def _write_humanoid_metrics(stage, scene_plan: HumanoidShowcaseScenePlan, materials: dict[str, object]) -> None:
+    combined = [*scene_plan.baseline_events, *scene_plan.trained_events]
+    summary = summarize_tool_trace(combined)
+    total = max(1, int(summary["total_tool_calls"]))
+    execute = int(summary["execute_skill_calls"])
+    score = int(summary["score_progress_calls"])
+    _add_cube(stage, "/World/Metrics/ToolCallsTotal", (-1.15, 1.48, 1.75), (min(1.8, total / 160), 0.025, 0.055), materials["success_green"])
+    _add_cube(stage, "/World/Metrics/ExecuteSkills", (-1.15, 1.43, 1.58), (min(1.5, execute / 45), 0.025, 0.045), materials["policy_blue"])
+    _add_cube(stage, "/World/Metrics/VisionScores", (-1.15, 1.38, 1.43), (min(1.5, score / 45), 0.025, 0.045), materials["warning_amber"])
+    tick_count = min(48, total)
+    for idx in range(tick_count):
+        x = -2.05 + idx * (4.1 / max(1, tick_count - 1))
+        material = materials["success_green"] if idx % 4 == 0 else materials["humanoid_silver"]
+        _add_cube(stage, f"/World/Metrics/ToolCallRail/Tick_{idx:02d}", (x, -1.42, 0.055), (0.012, 0.035, 0.035), material)
+    stations = summary["stations"]
+    if isinstance(stations, dict):
+        max_station_count = max([int(value) for value in stations.values()], default=1)
+        for x, station in [(-1.7, "pantry"), (-0.85, "counter"), (0.0, "sink"), (0.85, "table"), (1.7, "delivery")]:
+            height = 0.12 + 0.38 * int(stations.get(station, 0)) / max_station_count
+            _add_cube(stage, f"/World/Metrics/StationLoad/{station}", (x, -0.72, height), (0.04, 0.04, height), materials["success_green"])
 
 
 def _humanoid_root_scale() -> tuple[float, float, float]:
@@ -352,15 +381,25 @@ def _write_humanoid_actor(
             _add_cube(stage, f"{root}/LeftLeg", (-1.9, y_offset - 0.055, 0.72), (0.045, 0.035, 0.24), material),
             _add_cube(stage, f"{root}/RightLeg", (-1.9, y_offset + 0.055, 0.72), (0.045, 0.035, 0.24), material),
         ]
-    stations = {"pantry": -1.7, "counter": -0.85, "sink": 0.0, "table": 0.85, "delivery": 1.7}
-    for event in events:
-        if event.get("tool_name") != "execute_skill":
-            continue
-        summary = event.get("observation_summary") or {}
-        station = str(summary.get("station") or "counter")
-        frame = int(summary.get("frame_index") or 0)
-        x = stations.get(station, 0.0)
-        humanoid_asset.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 0.85), frame)
+    left_target = _add_cube(stage, f"{root}/LeftHandTarget", (-1.9, y_offset - 0.16, 1.12), (0.025, 0.025, 0.025), material)
+    right_target = _add_cube(stage, f"{root}/RightHandTarget", (-1.9, y_offset + 0.16, 1.12), (0.025, 0.025, 0.025), material)
+    tool_token = _add_cube(stage, f"{root}/ToolToken", (-1.9, y_offset, 0.98), (0.06, 0.035, 0.02), material)
+    for segment in compile_humanoid_motion(events):
+        frame = segment.frame
+        x, _, z = segment.root_xyz
+        humanoid_asset.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, z), frame)
+        left_target.GetOrderedXformOps()[0].Set(
+            Gf.Vec3d(segment.left_hand_xyz[0], y_offset - 0.18, segment.left_hand_xyz[2]),
+            frame,
+        )
+        right_target.GetOrderedXformOps()[0].Set(
+            Gf.Vec3d(segment.right_hand_xyz[0], y_offset + 0.18, segment.right_hand_xyz[2]),
+            frame,
+        )
+        tool_token.GetOrderedXformOps()[0].Set(
+            Gf.Vec3d(segment.right_hand_xyz[0], y_offset, max(0.82, segment.right_hand_xyz[2] - 0.08)),
+            frame,
+        )
         if use_proxy and proxy_prims:
             proxy_prims[0].GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.08), frame)
             proxy_prims[1].GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.43), frame)
