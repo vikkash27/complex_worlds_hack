@@ -6,20 +6,22 @@
   <title>RoboCerebra Reward Lab — Presentation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #050a14;
-      --surface:   #0b1220;
-      --border:    rgba(99,179,255,0.15);
-      --accent1:   #3b82f6;
-      --accent2:   #06b6d4;
-      --accent3:   #8b5cf6;
-      --gold:      #f59e0b;
-      --text:      #e2e8f0;
-      --muted:     #64748b;
+      --bg:        #08090c;
+      --surface:   #0d0f14;
+      --border:    rgba(30,35,48,0.9);
+      --accent1:   #5ac8fa;
+      --accent2:   #7cf2c4;
+      --accent3:   #9b5bff;
+      --gold:      #ffb86b;
+      --bad:       #ff6b8b;
+      --text:      #e7eaf3;
+      --muted:     #7a8095;
+      --dim:       #4a5061;
     }
 
     html, body {
@@ -27,14 +29,13 @@
       overflow: hidden;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01", "cv11";
     }
 
-    /* ── SLIDE CONTAINER ───────────────────────────────────────── */
-    .deck {
-      width: 100%; height: 100%;
-      position: relative;
-    }
+    /* ── SLIDE CONTAINER ──────────────────────────────────── */
+    .deck { width: 100%; height: 100%; position: relative; }
 
     .slide {
       position: absolute;
@@ -50,142 +51,103 @@
       transform: translateX(60px);
       padding: 2rem;
     }
-    .slide.active {
-      opacity: 1;
-      pointer-events: all;
-      transform: translateX(0);
-    }
-    .slide.exit {
-      opacity: 0;
-      transform: translateX(-60px);
-    }
+    .slide.active  { opacity: 1; pointer-events: all; transform: translateX(0); }
+    .slide.exit    { opacity: 0; transform: translateX(-60px); }
 
-    /* ── ANIMATED BACKGROUND MESH ──────────────────────────────── */
-    .bg-mesh {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
-      pointer-events: none;
-    }
+    /* ── BACKGROUND ──────────────────────────────────────── */
+    .bg-mesh { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
     .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.18;
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); opacity: 0.18;
       animation: drift 12s ease-in-out infinite alternate;
     }
     .orb1 { width: 600px; height: 600px; background: var(--accent1); top: -150px; left: -100px; animation-duration: 14s; }
     .orb2 { width: 500px; height: 500px; background: var(--accent3); bottom: -120px; right: -80px; animation-duration: 16s; animation-delay: -4s; }
     .orb3 { width: 350px; height: 350px; background: var(--accent2); top: 30%; left: 40%; animation-duration: 10s; animation-delay: -7s; }
-
     @keyframes drift {
-      from { transform: translate(0, 0) scale(1); }
-      to   { transform: translate(40px, 30px) scale(1.08); }
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(40px,30px) scale(1.08); }
     }
-
-    /* grid overlay */
     .grid-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background-image:
-        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+        linear-gradient(rgba(92,200,250,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(92,200,250,0.04) 1px, transparent 1px);
       background-size: 60px 60px;
     }
 
-    /* ── NAVIGATION ────────────────────────────────────────────── */
-    nav {
-      position: fixed;
-      bottom: 2.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+    /* ── PROGRESS LINE TOP ───────────────────────────────── */
+    .progress-line {
+      position: fixed; top: 0; left: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent1));
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+      z-index: 200;
     }
 
+    /* ── SLIDE NUMBER ─────────────────────────────────────── */
+    .slide-num-badge {
+      position: fixed; top: 1.8rem; right: 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; color: var(--muted); z-index: 100; letter-spacing: 0.08em;
+    }
+
+    /* ── NAVIGATION ──────────────────────────────────────── */
+    nav {
+      position: fixed; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
+      z-index: 100; display: flex; align-items: center; gap: 1rem;
+    }
     .nav-btn {
-      background: rgba(11,18,32,0.85);
-      border: 1px solid var(--border);
-      color: var(--text);
-      width: 48px; height: 48px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem;
-      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      background: rgba(13,15,20,0.85); border: 1px solid var(--border);
+      color: var(--text); width: 48px; height: 48px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; transition: background 0.2s, border-color 0.2s, transform 0.15s;
       backdrop-filter: blur(12px);
     }
-    .nav-btn:hover { background: rgba(59,130,246,0.2); border-color: var(--accent1); transform: scale(1.08); }
+    .nav-btn:hover { background: rgba(92,200,250,0.12); border-color: var(--accent1); transform: scale(1.08); }
     .nav-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
-
-    .slide-counter {
-      font-size: 0.8rem;
-      color: var(--muted);
-      min-width: 50px;
-      text-align: center;
-      letter-spacing: 0.05em;
-    }
-
-    .dot-nav {
-      display: flex; gap: 8px;
-    }
+    .dot-nav { display: flex; gap: 8px; }
     .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--muted);
-      cursor: pointer;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted); cursor: pointer;
       transition: background 0.3s, transform 0.3s;
     }
-    .dot.active { background: var(--accent1); transform: scale(1.4); }
-
-    /* ── KEYBOARD HINT ─────────────────────────────────────────── */
+    .dot.active { background: var(--accent2); transform: scale(1.4); }
     .key-hint {
-      position: fixed;
-      bottom: 2.5rem;
-      right: 2rem;
-      font-size: 0.7rem;
-      color: var(--muted);
-      z-index: 100;
+      position: fixed; bottom: 2.5rem; right: 2rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); z-index: 100;
     }
     .key-hint kbd {
-      display: inline-block;
-      padding: 2px 6px;
-      border: 1px solid var(--muted);
-      border-radius: 4px;
-      font-size: 0.68rem;
+      display: inline-block; padding: 2px 6px;
+      border: 1px solid var(--muted); border-radius: 4px; font-size: 0.68rem;
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       SLIDE 1 — INTRO
-    ═══════════════════════════════════════════════════════════ */
-    #slide-1 { z-index: 1; }
+    /* ── SHARED HELPERS ──────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes growBar { from { width: 0; } }
 
+    /* ══════════════════════════════════════════════════════
+       SLIDE 1 — INTRO
+    ══════════════════════════════════════════════════════ */
     .slide-inner { position: relative; z-index: 1; width: 100%; max-width: 900px; }
 
-    /* top badge */
     .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 1rem;
-      border-radius: 999px;
-      border: 1px solid rgba(6,182,212,0.4);
-      background: rgba(6,182,212,0.08);
-      font-size: 0.72rem;
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 1.2rem; border-radius: 999px;
+      border: 1px solid rgba(124,242,196,0.3);
+      background: rgba(124,242,196,0.07);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;           /* ← bigger than before */
       color: var(--accent2);
-      letter-spacing: 0.12em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       font-weight: 600;
       margin-bottom: 2.2rem;
     }
     .badge-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
+      width: 7px; height: 7px; border-radius: 50%;
       background: var(--accent2);
       animation: pulse 2s ease-in-out infinite;
     }
@@ -194,314 +156,255 @@
       50%       { opacity: 0.4; transform: scale(0.7); }
     }
 
-    /* main title */
     .title-block { margin-bottom: 2.8rem; }
-
     .title-eyebrow {
-      font-size: 0.78rem;
-      font-weight: 500;
-      color: var(--accent2);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      margin-bottom: 0.6rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem; font-weight: 500;
+      color: var(--accent1); letter-spacing: 0.2em;
+      text-transform: uppercase; margin-bottom: 0.6rem;
     }
-
     .title-main {
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: clamp(2.8rem, 6vw, 5rem);
-      font-weight: 700;
-      line-height: 1.05;
-      background: linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #67e8f9 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-weight: 800; line-height: 1.05; letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #7cf2c4 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-
     .title-sub {
-      font-size: clamp(1rem, 2vw, 1.3rem);
-      color: var(--muted);
-      margin-top: 1rem;
-      font-weight: 400;
-      max-width: 560px;
+      font-size: clamp(1rem, 2vw, 1.3rem); color: var(--muted);
+      margin-top: 1rem; font-weight: 400; max-width: 560px;
     }
-
-    /* divider */
     .divider {
-      width: 100%;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(30,35,48,1), transparent);
       margin: 2rem 0;
     }
-
-    /* team section */
     .team-label {
-      font-size: 0.72rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 1.2rem;
-      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 1.2rem; font-weight: 500;
     }
-
-    .team-list {
-      display: flex;
-      gap: 1.2rem;
-      flex-wrap: wrap;
-    }
-
+    .team-list { display: flex; gap: 1.2rem; flex-wrap: wrap; }
     .member-card {
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-      padding: 0.75rem 1.2rem;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0.85rem;
+      padding: 0.75rem 1.2rem; border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(30,35,48,0.9);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.01);
       backdrop-filter: blur(12px);
       animation: fadeUp 0.5s ease-out both;
     }
     .member-card:nth-child(1) { animation-delay: 0.1s; }
     .member-card:nth-child(2) { animation-delay: 0.22s; }
     .member-card:nth-child(3) { animation-delay: 0.34s; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
     .avatar {
-      width: 40px; height: 40px;
-      border-radius: 50%;
+      width: 40px; height: 40px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.85rem;
-      font-weight: 700;
-      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
     }
-    .av1 { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
-    .av2 { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
-    .av3 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
-
-    .member-name {
-      font-size: 0.92rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    /* floating robot icon */
+    .av1 { background: linear-gradient(135deg, var(--accent2), var(--accent1)); color: #08090c; }
+    .av2 { background: linear-gradient(135deg, var(--accent3), #c084fc); color: #fff; }
+    .av3 { background: linear-gradient(135deg, var(--gold), #ff6b8b); color: #08090c; }
+    .member-name { font-size: 0.92rem; font-weight: 600; color: var(--text); }
     .robot-icon {
-      position: absolute;
-      right: -40px;
-      top: 50%;
-      transform: translateY(-60%);
-      font-size: 9rem;
-      opacity: 0.07;
-      animation: floatY 6s ease-in-out infinite;
-      pointer-events: none;
-      user-select: none;
+      position: absolute; right: -40px; top: 50%;
+      transform: translateY(-60%); font-size: 9rem;
+      opacity: 0.07; animation: floatY 6s ease-in-out infinite;
+      pointer-events: none; user-select: none;
     }
     @keyframes floatY {
       0%, 100% { transform: translateY(-60%); }
       50%       { transform: translateY(-65%); }
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       SLIDE 2 — WHAT IS IT
-    ═══════════════════════════════════════════════════════════ */
-    #slide-2 { z-index: 1; }
-
-    .s2-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.4rem;
-      width: 100%;
-      max-width: 960px;
-    }
-
-    .s2-header {
-      grid-column: 1 / -1;
+    /* ══════════════════════════════════════════════════════
+       SLIDE 2 — PROBLEM STATEMENT
+    ══════════════════════════════════════════════════════ */
+    .s-header { margin-bottom: 1.6rem; position: relative; z-index: 1; }
+    .s-title {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800; letter-spacing: -0.02em; line-height: 1.1;
+      background: linear-gradient(135deg, #ffffff, #93c5fd);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
       margin-bottom: 0.5rem;
     }
-
-    .s2-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      font-weight: 700;
-      background: linear-gradient(135deg, #ffffff, #93c5fd);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1.1;
-      margin-bottom: 0.6rem;
+    .s-subtitle {
+      color: var(--muted); font-size: 0.92rem; max-width: 680px; line-height: 1.7;
     }
+    .s-subtitle strong { color: var(--accent1); font-weight: 600; }
 
-    .s2-subtitle {
-      color: var(--muted);
-      font-size: 0.95rem;
-      max-width: 620px;
-      line-height: 1.7;
+    /* problem cards grid */
+    .prob-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      width: 100%; max-width: 860px;
+      position: relative; z-index: 1;
     }
-
-    /* info cards */
-    .info-card {
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
+    .prob-card {
+      border-radius: 12px;
+      border: 1px solid rgba(30,35,48,0.9);
+      background: rgba(13,15,20,0.5);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
       backdrop-filter: blur(16px);
-      padding: 1.5rem;
-      position: relative;
-      overflow: hidden;
+      padding: 1.3rem 1.4rem;
+      position: relative; overflow: hidden;
       animation: fadeUp 0.5s ease-out both;
       transition: border-color 0.3s, transform 0.3s;
     }
-    .info-card:hover {
-      border-color: rgba(99,179,255,0.35);
-      transform: translateY(-3px);
+    .prob-card:hover { border-color: rgba(92,200,250,0.22); transform: translateY(-2px); }
+    .prob-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px; border-radius: 12px 12px 0 0;
     }
-    .info-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      border-radius: 16px 16px 0 0;
+    .pc-red::before    { background: linear-gradient(90deg, #ff6b8b, var(--gold)); }
+    .pc-violet::before { background: linear-gradient(90deg, var(--accent3), #c084fc); }
+    .pc-gold::before   { background: linear-gradient(90deg, var(--gold), #fb923c); }
+    .pc-blue::before   { background: linear-gradient(90deg, var(--accent1), var(--accent2)); }
+
+    .pd1 { animation-delay: 0.05s; }
+    .pd2 { animation-delay: 0.14s; }
+    .pd3 { animation-delay: 0.23s; }
+    .pd4 { animation-delay: 0.32s; }
+
+    .prob-icon { font-size: 1.5rem; margin-bottom: 0.65rem; display: block; }
+    .prob-heading {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; text-transform: uppercase;
+      letter-spacing: 0.14em; font-weight: 600; margin-bottom: 0.45rem;
     }
-    .card-blue::before  { background: linear-gradient(90deg, var(--accent1), var(--accent2)); }
-    .card-purple::before{ background: linear-gradient(90deg, var(--accent3), #ec4899); }
-    .card-gold::before  { background: linear-gradient(90deg, var(--gold), #f97316); }
-    .card-teal::before  { background: linear-gradient(90deg, var(--accent2), #10b981); }
-
-    .card-delay-1 { animation-delay: 0.05s; }
-    .card-delay-2 { animation-delay: 0.15s; }
-    .card-delay-3 { animation-delay: 0.25s; }
-    .card-delay-4 { animation-delay: 0.35s; }
-
-    .card-icon {
-      font-size: 1.6rem;
-      margin-bottom: 0.8rem;
-      display: block;
+    .pc-red .prob-heading    { color: #ff6b8b; }
+    .pc-violet .prob-heading { color: #c084fc; }
+    .pc-gold .prob-heading   { color: var(--gold); }
+    .pc-blue .prob-heading   { color: var(--accent1); }
+    .prob-body {
+      font-size: 0.87rem; line-height: 1.65; color: #9ca3af;
     }
+    .prob-body em { color: var(--text); font-style: normal; font-weight: 500; }
 
-    .card-heading {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-weight: 600;
-      margin-bottom: 0.55rem;
-    }
-    .card-blue .card-heading  { color: var(--accent1); }
-    .card-purple .card-heading{ color: var(--accent3); }
-    .card-gold .card-heading  { color: var(--gold); }
-    .card-teal .card-heading  { color: var(--accent2); }
-
-    .card-body {
-      font-size: 0.9rem;
-      line-height: 1.65;
-      color: #cbd5e1;
+    /* ══════════════════════════════════════════════════════
+       SLIDE 3 — OUR SOLUTION (PIPELINE FLOW)
+    ══════════════════════════════════════════════════════ */
+    .sol-wrap {
+      width: 100%; max-width: 1280px;
+      position: relative; z-index: 1;
     }
 
-    /* pill tags */
-    .tag-row {
+    /* pipeline row — fills width, no scroll */
+    .pipeline {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-      margin-top: 0.9rem;
-    }
-    .tag {
-      font-size: 0.7rem;
-      padding: 0.22rem 0.65rem;
-      border-radius: 999px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-    .tag-blue   { background: rgba(59,130,246,0.15);  color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); }
-    .tag-purple { background: rgba(139,92,246,0.15);  color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
-    .tag-gold   { background: rgba(245,158,11,0.15);  color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
-    .tag-teal   { background: rgba(6,182,212,0.15);   color: #67e8f9; border: 1px solid rgba(6,182,212,0.25); }
-
-    /* step list */
-    .step-list {
-      list-style: none;
-      margin-top: 0.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-    }
-    .step-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.55rem;
-      font-size: 0.87rem;
-      color: #cbd5e1;
-      line-height: 1.5;
-    }
-    .step-num {
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      background: rgba(59,130,246,0.2);
-      color: var(--accent1);
-      font-size: 0.65rem;
-      font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      margin-top: 2px;
+      align-items: stretch;
+      width: 100%;
+      margin-top: 1.4rem;
     }
 
-    /* ── PROGRESS BAR ANIMATION ─────────────────────────────── */
-    .progress-demo {
-      margin-top: 1rem;
+    /* individual pipeline node — all equal width */
+    .pipe-node {
+      flex: 1;
+      min-width: 0;
+      border-radius: 12px;
+      border: 1px solid rgba(30,35,48,0.9);
+      background: rgba(13,15,20,0.55);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+      animation: fadeUp 0.5s ease-out both;
+      transition: border-color 0.3s, transform 0.25s;
     }
-    .prog-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.72rem;
-      color: var(--muted);
+    .pipe-node:hover { border-color: rgba(92,200,250,0.28); transform: translateY(-3px); }
+
+    .nd1 { animation-delay: 0.04s; }
+    .nd2 { animation-delay: 0.14s; }
+    .nd3 { animation-delay: 0.24s; }
+    .nd4 { animation-delay: 0.34s; }
+    .nd5 { animation-delay: 0.44s; }
+
+    .node-accent { height: 2px; }
+    .na-cyan   { background: linear-gradient(90deg, var(--accent1), var(--accent2)); }
+    .na-violet { background: linear-gradient(90deg, var(--accent3), #c084fc); }
+    .na-gold   { background: linear-gradient(90deg, var(--gold), #fb923c); }
+    .na-emerald{ background: linear-gradient(90deg, var(--accent2), var(--accent1)); }
+    .na-blue   { background: linear-gradient(90deg, #60a5fa, var(--accent1)); }
+
+    .node-body { padding: 0.85rem 0.9rem 1rem; height: 100%; }
+    .node-icon { font-size: 1.3rem; margin-bottom: 0.5rem; display: block; }
+    .node-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem; text-transform: uppercase;
+      letter-spacing: 0.13em; font-weight: 700;
       margin-bottom: 0.35rem;
     }
-    .prog-track {
-      width: 100%;
-      height: 6px;
-      border-radius: 3px;
-      background: rgba(255,255,255,0.05);
-      overflow: hidden;
-      margin-bottom: 0.5rem;
-    }
-    .prog-fill {
-      height: 100%;
-      border-radius: 3px;
-      animation: growBar 2s 0.8s ease-out both;
-    }
-    .fill-sparse { background: linear-gradient(90deg, #ef4444, #f97316); width: 38%; }
-    .fill-dense  { background: linear-gradient(90deg, var(--accent1), var(--accent2)); width: 82%; }
+    .nc-cyan   .node-title { color: var(--accent1); }
+    .nc-violet .node-title { color: #c084fc; }
+    .nc-gold   .node-title { color: var(--gold); }
+    .nc-emerald .node-title { color: var(--accent2); }
+    .nc-blue   .node-title { color: #93c5fd; }
 
-    @keyframes growBar {
-      from { width: 0; }
+    .node-desc {
+      font-size: 0.75rem; line-height: 1.55; color: #7a8095;
+    }
+    .node-tag {
+      display: inline-block; margin-top: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem; padding: 2px 8px; border-radius: 999px;
+      font-weight: 500; letter-spacing: 0.06em;
+    }
+    .nt-cyan   { background: rgba(90,200,250,0.1);  color: var(--accent1); border: 1px solid rgba(90,200,250,0.2); }
+    .nt-violet { background: rgba(155,91,255,0.1);  color: #c084fc;        border: 1px solid rgba(155,91,255,0.2); }
+    .nt-gold   { background: rgba(255,184,107,0.1); color: var(--gold);    border: 1px solid rgba(255,184,107,0.2); }
+    .nt-emerald{ background: rgba(124,242,196,0.1); color: var(--accent2); border: 1px solid rgba(124,242,196,0.2); }
+    .nt-blue   { background: rgba(147,197,253,0.1); color: #93c5fd;        border: 1px solid rgba(147,197,253,0.2); }
+
+    /* arrows — flex-shrink 0, sit between equal cards */
+    .pipe-arrow {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 0 4px;
+      animation: fadeUp 0.5s ease-out both;
+    }
+    .arrow-line {
+      display: flex;
+      align-items: center;
+    }
+    .arrow-shaft {
+      width: 18px; height: 1.5px;
+      background: linear-gradient(90deg, var(--dim), var(--accent1));
+    }
+    .arrow-head {
+      width: 0; height: 0;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      border-left: 7px solid var(--accent1);
+    }
+    .arrow-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--dim);
+      text-align: center; white-space: nowrap;
+      line-height: 1.3;
     }
 
-    /* ── SLIDE NUMBER ────────────────────────────────────────── */
-    .slide-num-badge {
-      position: fixed;
-      top: 1.8rem;
-      right: 2rem;
-      font-size: 0.7rem;
-      color: var(--muted);
-      z-index: 100;
-      letter-spacing: 0.08em;
+    /* tag-row for slide 3 header */
+    .sol-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.5rem; }
+    .tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem; padding: 0.22rem 0.65rem; border-radius: 999px;
+      font-weight: 500; letter-spacing: 0.06em;
     }
-
-    /* ── PROGRESS LINE TOP ───────────────────────────────────── */
-    .progress-line {
-      position: fixed;
-      top: 0; left: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent1), var(--accent2));
-      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
-      z-index: 200;
-    }
-
+    .tag-teal   { background: rgba(124,242,196,0.1); color: var(--accent2); border: 1px solid rgba(124,242,196,0.2); }
+    .tag-blue   { background: rgba(90,200,250,0.1);  color: var(--accent1); border: 1px solid rgba(90,200,250,0.2); }
+    .tag-violet { background: rgba(155,91,255,0.12); color: #c084fc;        border: 1px solid rgba(155,91,255,0.2); }
+    .tag-gold   { background: rgba(255,184,107,0.1); color: var(--gold);    border: 1px solid rgba(255,184,107,0.2); }
   </style>
 </head>
 <body>
 
-<!-- Background -->
 <div class="bg-mesh">
   <div class="orb orb1"></div>
   <div class="orb orb2"></div>
@@ -509,24 +412,19 @@
 </div>
 <div class="grid-overlay"></div>
 
-<!-- Progress line -->
 <div class="progress-line" id="progressLine"></div>
+<div class="slide-num-badge" id="slideNumBadge">01 / 03</div>
 
-<!-- Slide number -->
-<div class="slide-num-badge" id="slideNumBadge">01 / 05</div>
-
-<!-- ═══════ DECK ═══════ -->
 <div class="deck" id="deck">
 
-  <!-- ─── SLIDE 1 ─── -->
+  <!-- ══════ SLIDE 1 — INTRO ══════ -->
   <div class="slide active" id="slide-1">
     <div class="slide-inner">
-
       <div class="robot-icon">🤖</div>
 
       <div class="badge">
         <span class="badge-dot"></span>
-        Hackathon Project · 2026
+        Complex World Hackathon Project 2026
       </div>
 
       <div class="title-block">
@@ -555,148 +453,193 @@
           <span class="member-name">Min Thant Kyaw</span>
         </div>
       </div>
-
     </div>
   </div><!-- /slide-1 -->
 
-  <!-- ─── SLIDE 2 ─── -->
+  <!-- ══════ SLIDE 2 — PROBLEM STATEMENT ══════ -->
   <div class="slide" id="slide-2">
-    <div class="s2-grid" style="position:relative;z-index:1;">
+    <div style="width:100%;max-width:860px;position:relative;z-index:1;">
 
-      <!-- Header -->
-      <div class="s2-header">
-        <h2 class="s2-title">What We Built</h2>
-        <p class="s2-subtitle">
-          An <strong style="color:#93c5fd">OpenReward-compatible benchmark environment</strong> that wraps a
-          7-stage breakfast-tray robot workflow and demonstrates that dense, semantically-shaped
-          rewards dramatically outperform sparse success-only feedback.
+      <div class="s-header">
+        <h2 class="s-title">The Problem</h2>
+        <p class="s-subtitle">
+          Physical AI agents post-SWE struggle with the <strong>real world</strong> —
+          tasks that demand memory, recovery, and multi-step reasoning over hundreds of timesteps.
         </p>
       </div>
 
-      <!-- Card 1 — Problem -->
-      <div class="info-card card-blue card-delay-1">
-        <span class="card-icon">🧩</span>
-        <p class="card-heading">The Problem</p>
-        <p class="card-body">
-          Frontier AI agents fail at tasks requiring <em>memory, recovery, and long-horizon credit
-          assignment</em>. Existing benchmarks don't capture this failure mode.
-        </p>
-        <div class="tag-row">
-          <span class="tag tag-blue">Long-Horizon RL</span>
-          <span class="tag tag-blue">Physical AI</span>
+      <div class="prob-grid">
+
+        <div class="prob-card pc-red pd1">
+          <span class="prob-icon">📉</span>
+          <p class="prob-heading">Sparse Reward Problem</p>
+          <p class="prob-body">Agents get rewarded <em>only at the end</em> — no signal for hundreds of steps.</p>
         </div>
-      </div>
 
-      <!-- Card 2 — The Task -->
-      <div class="info-card card-purple card-delay-2">
-        <span class="card-icon">🍳</span>
-        <p class="card-heading">The Task — Breakfast Tray</p>
-        <ul class="step-list">
-          <li><span class="step-num">1</span> Locate items in the scene</li>
-          <li><span class="step-num">2</span> Clear workspace</li>
-          <li><span class="step-num">3</span> Pick mug &amp; fill drink</li>
-          <li><span class="step-num">4</span> Place snack on tray</li>
-          <li><span class="step-num">5</span> <strong style="color:#f9a8d4">Recover from mid-task disturbance</strong></li>
-          <li><span class="step-num">6</span> Deliver tray to target</li>
-        </ul>
-      </div>
-
-      <!-- Card 3 — Reward Design -->
-      <div class="info-card card-gold card-delay-3">
-        <span class="card-icon">⚡</span>
-        <p class="card-heading">Dense vs Sparse Rewards</p>
-        <p class="card-body" style="margin-bottom:0.6rem">
-          Optional Gemini-style VLM scoring at subgoal boundaries; the default path stays deterministic so demos run without API keys. After <code style="font-size:0.85em">scripts/run_demo.py</code>, see <code style="font-size:0.85em">artifacts/metrics/leaderboard.json</code> for dense vs reactive-script lifts on randomized held-out scenes.
-        </p>
-        <div class="tag-row" style="margin-top:0.8rem">
-          <span class="tag tag-gold">Gemini API</span>
-          <span class="tag tag-gold">Tabular Q-Learning</span>
+        <div class="prob-card pc-violet pd2">
+          <span class="prob-icon">🧠</span>
+          <p class="prob-heading">Long-Horizon Credit Assignment</p>
+          <p class="prob-body">Across 20+ macro-steps, <em>which action caused the failure?</em> Nobody knows.</p>
         </div>
-      </div>
 
-      <!-- Card 4 — Stack  -->
-      <div class="info-card card-teal card-delay-4">
-        <span class="card-icon">🛠️</span>
-        <p class="card-heading">Tech Stack</p>
-        <p class="card-body">
-          Packaged as an <strong style="color:#67e8f9">OpenReward environment</strong> with
-          tool-call APIs (observe, execute_skill, score_progress). Replay GIFs, training curves,
-          and a visual HTML report are generated automatically.
-        </p>
-        <div class="tag-row">
-          <span class="tag tag-teal">OpenReward</span>
-          <span class="tag tag-teal">Isaac Sim</span>
-          <span class="tag tag-teal">Python 3.11</span>
-          <span class="tag tag-teal">Brev Cloud</span>
+        <div class="prob-card pc-gold pd3">
+          <span class="prob-icon">⚠️</span>
+          <p class="prob-heading">No Recovery from Disturbances</p>
+          <p class="prob-body">When something gets knocked mid-task, <em>agents have no recovery strategy</em>.</p>
         </div>
-      </div>
 
+        <div class="prob-card pc-blue pd4">
+          <span class="prob-icon">🔬</span>
+          <p class="prob-heading">Benchmarks Don't Test This</p>
+          <p class="prob-body">No standard eval exists for <em>physical-AI with verifiable long-horizon rollouts</em>.</p>
+        </div>
+
+      </div>
     </div>
   </div><!-- /slide-2 -->
 
-  <!-- ─── SLIDE 3 ─── -->
+  <!-- ══════ SLIDE 3 — OUR SOLUTION (PIPELINE) ══════ -->
   <div class="slide" id="slide-3">
-    <div class="slide-inner">
-      <p class="title-eyebrow">OpenReward surface</p>
-      <h1 class="title-main" style="font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.15;">108 tasks · 76 train · 16 val · 16 test</h1>
-      <p class="title-sub" style="max-width: 38rem;">
-        Four embodied task families repeat across curated seeds: breakfast tray, spill recovery, countertop cleanup, and a 30-stage humanoid hospitality chain. Task specs for hosted sessions use the same scene, horizon, and macro-step budgets as local training and <code style="font-size:0.88em">scripts/benchmark_openreward.py</code>.
-      </p>
-    </div>
-  </div>
+    <div class="sol-wrap">
 
-  <!-- ─── SLIDE 4 ─── -->
-  <div class="slide" id="slide-4">
-    <div class="slide-inner">
-      <p class="title-eyebrow">Claims we can defend</p>
-      <h1 class="title-main" style="font-size: clamp(1.7rem, 3.8vw, 2.6rem); line-height: 1.15;">Macro planning &amp; tool policy</h1>
-      <p class="title-sub" style="max-width: 40rem;">
-        Success is decided by the simulator at episode end, not an LLM judge. Isaac Sim replays the same JSONL traces the OpenReward tools emit—high-fidelity visualization of decisions, not continuous-control RL inside Isaac. This complements verifier-grounded code envs and long-horizon stochastic sims elsewhere in the hackathon.
-      </p>
-    </div>
-  </div>
+      <div class="s-header">
+        <h2 class="s-title">Our Solution</h2>
+        <p class="s-subtitle">
+          An end-to-end <strong>OpenReward environment</strong> with dense Gemini-scored rewards
+          at every semantic subgoal boundary — making long-horizon credit assignment tractable.
+        </p>
+        <div class="sol-tags" style="margin-top:0.7rem;">
+          <span class="tag tag-teal">OpenReward</span>
+          <span class="tag tag-blue">Isaac Sim</span>
+          <span class="tag tag-violet">Gemini API</span>
+          <span class="tag tag-gold">Tabular Q-Learning</span>
+          <span class="tag tag-teal">React Dashboard</span>
+        </div>
+      </div>
 
-  <!-- ─── SLIDE 5 ─── -->
-  <div class="slide" id="slide-5">
-    <div class="slide-inner">
-      <p class="title-eyebrow">Evidence &amp; repro</p>
-      <h1 class="title-main" style="font-size: clamp(1.8rem, 4vw, 2.7rem); line-height: 1.15;">Artifacts judges can open</h1>
-      <p class="title-sub" style="max-width: 42rem; text-align: left;">
-        <strong>Local:</strong> <code style="font-size:0.85em">python scripts/run_demo.py</code> → leaderboard, GIFs, humanoid traces.<br/>
-        <strong>Report:</strong> <code style="font-size:0.85em">python scripts/build_visual_report.py</code> → <code style="font-size:0.85em">artifacts/visual_report/index.html</code>.<br/>
-        <strong>Hosted compare:</strong> run <code style="font-size:0.85em">scripts/benchmark_openreward.py</code> with <code style="font-size:0.85em">--compare-policy</code> to emit <code style="font-size:0.85em">submission_benchmark_summary.json</code> alongside per-policy rollouts.
-      </p>
+      <!-- ── PIPELINE FLOW ── -->
+      <div class="pipeline">
+
+        <!-- Node 1: World Sim -->
+        <div class="pipe-node nc-cyan nd1">
+          <div class="node-accent na-cyan"></div>
+          <div class="node-body">
+            <span class="node-icon">🌍</span>
+            <p class="node-title">World Sim</p>
+            <p class="node-desc">BreakfastTrayWorld — 7-stage task, stochastic failures, mid-task disturbances</p>
+            <span class="node-tag nt-cyan">Python</span>
+          </div>
+        </div>
+
+        <!-- Arrow 1 -->
+        <div class="pipe-arrow" style="animation-delay:0.08s">
+          <div class="arrow-line">
+            <div class="arrow-shaft"></div>
+            <div class="arrow-head"></div>
+          </div>
+          <div class="arrow-label">observe()<br/>+ state</div>
+        </div>
+
+        <!-- Node 2: OpenReward Env -->
+        <div class="pipe-node nc-violet nd2">
+          <div class="node-accent na-violet"></div>
+          <div class="node-body">
+            <span class="node-icon">🔌</span>
+            <p class="node-title">OpenReward Env</p>
+            <p class="node-desc">Tool-call API server — observe, choose_subgoal, execute_skill, submit_done</p>
+            <span class="node-tag nt-violet">FastAPI</span>
+          </div>
+        </div>
+
+        <!-- Arrow 2 -->
+        <div class="pipe-arrow" style="animation-delay:0.18s">
+          <div class="arrow-line">
+            <div class="arrow-shaft"></div>
+            <div class="arrow-head"></div>
+          </div>
+          <div class="arrow-label">score_<br/>progress()</div>
+        </div>
+
+        <!-- Node 3: Gemini Scorer -->
+        <div class="pipe-node nc-gold nd3">
+          <div class="node-accent na-gold"></div>
+          <div class="node-body">
+            <span class="node-icon">✨</span>
+            <p class="node-title">Gemini Scorer</p>
+            <p class="node-desc">VLM-style progress scoring at subgoal boundaries with rationale + confidence</p>
+            <span class="node-tag nt-gold">Gemini API</span>
+          </div>
+        </div>
+
+        <!-- Arrow 3 -->
+        <div class="pipe-arrow" style="animation-delay:0.28s">
+          <div class="arrow-line">
+            <div class="arrow-shaft"></div>
+            <div class="arrow-head"></div>
+          </div>
+          <div class="arrow-label">dense<br/>reward Δ</div>
+        </div>
+
+        <!-- Node 4: Q-Policy -->
+        <div class="pipe-node nc-emerald nd4">
+          <div class="node-accent na-emerald"></div>
+          <div class="node-body">
+            <span class="node-icon">🧬</span>
+            <p class="node-title">Macro Policy</p>
+            <p class="node-desc">Tabular Q-learning over macro-actions — trains 2.4× faster with dense rewards</p>
+            <span class="node-tag nt-emerald">Q-Learning</span>
+          </div>
+        </div>
+
+        <!-- Arrow 4 -->
+        <div class="pipe-arrow" style="animation-delay:0.38s">
+          <div class="arrow-line">
+            <div class="arrow-shaft"></div>
+            <div class="arrow-head"></div>
+          </div>
+          <div class="arrow-label">action +<br/>episode log</div>
+        </div>
+
+        <!-- Node 5: Dashboard -->
+        <div class="pipe-node nc-blue nd5">
+          <div class="node-accent na-blue"></div>
+          <div class="node-body">
+            <span class="node-icon">📊</span>
+            <p class="node-title">Live Dashboard</p>
+            <p class="node-desc">React + Vite — subgoal DAG, reward timeline, live episode metrics</p>
+            <span class="node-tag nt-blue">React</span>
+          </div>
+        </div>
+
+      </div><!-- /pipeline -->
     </div>
-  </div>
+  </div><!-- /slide-3 -->
 
 </div><!-- /deck -->
 
-<!-- ── NAVIGATION ── -->
+<!-- Navigation -->
 <nav>
-  <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled aria-label="Previous slide">&#8592;</button>
+  <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled aria-label="Previous">&#8592;</button>
   <div class="dot-nav" id="dotNav"></div>
-  <button class="nav-btn" id="nextBtn" onclick="navigate(1)" aria-label="Next slide">&#8594;</button>
+  <button class="nav-btn" id="nextBtn" onclick="navigate(1)" aria-label="Next">&#8594;</button>
 </nav>
-
 <div class="key-hint"><kbd>←</kbd> <kbd>→</kbd> to navigate</div>
 
 <script>
-  const TOTAL = 5;
-  let current = 0;
-  let animating = false;
+  const TOTAL = 3;
+  let current = 0, animating = false;
 
-  const slides    = document.querySelectorAll('.slide');
-  const prevBtn   = document.getElementById('prevBtn');
-  const nextBtn   = document.getElementById('nextBtn');
-  const dotNav    = document.getElementById('dotNav');
-  const progress  = document.getElementById('progressLine');
-  const numBadge  = document.getElementById('slideNumBadge');
+  const slides   = document.querySelectorAll('.slide');
+  const prevBtn  = document.getElementById('prevBtn');
+  const nextBtn  = document.getElementById('nextBtn');
+  const dotNav   = document.getElementById('dotNav');
+  const progress = document.getElementById('progressLine');
+  const numBadge = document.getElementById('slideNumBadge');
 
-  // build dots
   for (let i = 0; i < TOTAL; i++) {
     const d = document.createElement('div');
     d.className = 'dot' + (i === 0 ? ' active' : '');
-    d.onclick   = () => goTo(i);
+    d.onclick = () => goTo(i);
     dotNav.appendChild(d);
   }
 
@@ -711,50 +654,35 @@
   function goTo(index) {
     if (animating || index === current) return;
     animating = true;
-
-    const from = slides[current];
-    const to   = slides[index];
-
+    const from = slides[current], to = slides[index];
     from.classList.add('exit');
     from.classList.remove('active');
-
     to.style.transform = index > current ? 'translateX(60px)' : 'translateX(-60px)';
     to.style.opacity = '0';
     to.classList.add('active');
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        to.style.transition = '';
-        to.style.transform  = '';
-        to.style.opacity    = '';
-
-        setTimeout(() => {
-          from.classList.remove('exit');
-          from.style.transform = '';
-          animating = false;
-        }, 700);
-      });
-    });
-
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      to.style.transition = '';
+      to.style.transform = '';
+      to.style.opacity = '';
+      setTimeout(() => { from.classList.remove('exit'); from.style.transform = ''; animating = false; }, 700);
+    }));
     current = index;
     updateUI();
   }
 
   function navigate(dir) { goTo(current + dir); }
 
-  document.addEventListener('keydown', (e) => {
-    if      (e.key === 'ArrowRight' || e.key === 'ArrowDown')  navigate(1);
-    else if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    navigate(-1);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
   });
 
-  // touch/swipe
   let touchX = null;
   document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
-  document.addEventListener('touchend',   e => {
+  document.addEventListener('touchend', e => {
     if (touchX === null) return;
     const dx = e.changedTouches[0].clientX - touchX;
-    if      (dx < -40) navigate(1);
-    else if (dx >  40) navigate(-1);
+    if (dx < -40) navigate(1); else if (dx > 40) navigate(-1);
     touchX = null;
   });
 
