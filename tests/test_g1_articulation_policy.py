@@ -4,6 +4,7 @@ from robocerebra_rl.g1_articulation_policy import (
     build_g1_policy_frame,
     build_g1_visual_link_poses,
     classify_g1_joint,
+    g1_link_path_candidates,
     select_supported_g1_joints,
 )
 from robocerebra_rl.humanoid_motion import MotionSegment
@@ -102,3 +103,17 @@ def test_build_g1_visual_link_poses_uses_arms_for_grasp_and_stall_for_failed_sta
 
     assert grasp["right_shoulder_pitch_link"].rotate_xyz[1] > 15
     assert stalled["torso_link"].translate_xyz[2] < 0
+
+
+def test_g1_link_path_candidates_include_nested_unitree_hierarchy():
+    candidates = g1_link_path_candidates("/World/Robot/HumanoidAsset", "left_knee_link")
+
+    assert "/World/Robot/HumanoidAsset/left_knee_link" in candidates
+    assert "/World/Robot/HumanoidAsset/pelvis/left_hip_pitch_link/left_hip_roll_link/left_hip_yaw_link/left_knee_link" in candidates
+
+
+def test_g1_link_path_candidates_include_torso_arm_hierarchy():
+    candidates = g1_link_path_candidates("/World/Robot/HumanoidAsset", "right_elbow_link")
+
+    assert "/World/Robot/HumanoidAsset/right_elbow_link" in candidates
+    assert "/World/Robot/HumanoidAsset/torso_link/right_shoulder_pitch_link/right_shoulder_roll_link/right_shoulder_yaw_link/right_elbow_link" in candidates

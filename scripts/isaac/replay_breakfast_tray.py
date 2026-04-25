@@ -18,7 +18,7 @@ from robocerebra_rl.isaac_scene import (
     make_humanoid_showcase_scene_plan,
     make_showcase_scene_plan,
 )
-from robocerebra_rl.g1_articulation_policy import build_g1_visual_link_poses
+from robocerebra_rl.g1_articulation_policy import build_g1_visual_link_poses, g1_link_path_candidates
 from robocerebra_rl.humanoid_motion import MotionSegment, compile_humanoid_motion, lane_status_counts, summarize_tool_trace
 
 
@@ -299,16 +299,12 @@ def _add_asset_reference(
 
 
 def _find_or_override_child_prim(stage, root: str, link_name: str):
-    candidates = (
-        f"{root}/HumanoidAsset/{link_name}",
-        f"{root}/HumanoidAsset/pelvis/{link_name}",
-        f"{root}/HumanoidAsset/torso_link/{link_name}",
-    )
-    for candidate in candidates:
+    asset_root = f"{root}/HumanoidAsset"
+    for candidate in g1_link_path_candidates(asset_root, link_name):
         prim = stage.GetPrimAtPath(candidate)
         if prim.IsValid():
             return prim
-    return stage.OverridePrim(candidates[0])
+    return stage.OverridePrim(g1_link_path_candidates(asset_root, link_name)[0])
 
 
 def _get_or_add_xform_op(xformable, op_type: str):
@@ -351,10 +347,19 @@ def _write_showcase_stage(stage, scene_plan: ShowcaseScenePlan, materials: dict[
 def _write_humanoid_stage(stage, scene_plan: HumanoidShowcaseScenePlan, materials: dict[str, object]) -> None:
     _add_cube(stage, "/World/LabFloor", (0.0, 0.0, -0.025), (4.4, 3.2, 0.025), materials["lab_floor"])
     _add_cube(stage, "/World/MetricWall", (0.0, 1.55, 1.2), (4.1, 0.04, 1.2), materials["glass_cyan"])
+    station_labels = {
+        "pantry": "1 observe items",
+        "counter": "2 pick tray",
+        "sink": "3 spill recovery",
+        "table": "4 place service",
+        "delivery": "5 handoff",
+    }
     for x, station in [(-1.7, "pantry"), (-0.85, "counter"), (0.0, "sink"), (0.85, "table"), (1.7, "delivery")]:
         stage.DefinePrim(f"/World/Stations/{station}", "Xform").SetDisplayName(station.title())
         _add_cube(stage, f"/World/Stations/{station}/Platform", (x, 0.15, 0.25), (0.36, 0.48, 0.06), materials["humanoid_silver"])
         _add_cube(stage, f"/World/Stations/{station}/Beacon", (x, -0.45, 0.62), (0.045, 0.045, 0.32), materials["warning_amber"])
+        stage.GetPrimAtPath(f"/World/Stations/{station}").SetDisplayName(station_labels[station])
+    _write_spill_recovery_props(stage, materials)
     _write_humanoid_metrics(stage, scene_plan, materials)
     baseline_segments = compile_humanoid_motion(scene_plan.baseline_events)
     trained_segments = compile_humanoid_motion(scene_plan.trained_events)
@@ -362,6 +367,15 @@ def _write_humanoid_stage(stage, scene_plan: HumanoidShowcaseScenePlan, material
     _write_lane_route(stage, "/World/TrainedRoute", trained_segments, 0.78, materials["policy_blue"], materials)
     _write_humanoid_actor(stage, "/World/BaselineHumanoid", baseline_segments, scene_plan.humanoid_asset_candidates, -0.78, materials["baseline_red"], materials)
     _write_humanoid_actor(stage, "/World/TrainedHumanoid", trained_segments, scene_plan.humanoid_asset_candidates, 0.78, materials["policy_blue"], materials)
+
+
+def _write_spill_recovery_props(stage, materials: dict[str, object]) -> None:
+    _add_cube(stage, "/World/TaskProps/Tray", (-0.85, 0.04, 0.58), (0.18, 0.12, 0.018), materials["motion_white"])
+    _add_cube(stage, "/World/TaskProps/Mug", (-1.65, 0.04, 0.56), (0.035, 0.035, 0.07), materials["policy_blue"])
+    _add_cube(stage, "/World/TaskProps/Snack", (-1.52, 0.20, 0.55), (0.07, 0.04, 0.03), materials["warning_amber"])
+    _add_cube(stage, "/World/TaskProps/Spill", (0.0, 0.08, 0.53), (0.16, 0.07, 0.006), materials["failure_red"])
+    _add_cube(stage, "/World/TaskProps/AbsorbentPad", (0.18, 0.08, 0.545), (0.11, 0.07, 0.008), materials["success_green"])
+    _add_cube(stage, "/World/TaskProps/DeliveryZone", (1.7, 0.08, 0.55), (0.22, 0.16, 0.012), materials["success_green"])
 
 
 def _write_humanoid_metrics(stage, scene_plan: HumanoidShowcaseScenePlan, materials: dict[str, object]) -> None:
@@ -481,17 +495,23 @@ def _write_humanoid_actor(
             _add_cube(stage, f"{root}/LeftLeg", (-1.9, y_offset - 0.055, 0.72), (0.045, 0.035, 0.24), material),
             _add_cube(stage, f"{root}/RightLeg", (-1.9, y_offset + 0.055, 0.72), (0.045, 0.035, 0.24), material),
         ]
-    left_target = _add_cube(stage, f"{root}/LeftHandTarget", (-1.9, y_offset - 0.16, 1.12), (0.025, 0.025, 0.025), material)
-    right_target = _add_cube(stage, f"{root}/RightHandTarget", (-1.9, y_offset + 0.16, 1.12), (0.025, 0.025, 0.025), material)
-    tool_token = _add_cube(stage, f"{root}/ToolToken", (-1.9, y_offset, 0.98), (0.06, 0.035, 0.02), material)
-    torso_joint = _add_sphere(stage, f"{root}/MotionRig/Torso", (-1.9, y_offset, 1.06), 0.055, materials["motion_white"])
-    head_joint = _add_sphere(stage, f"{root}/MotionRig/Head", (-1.9, y_offset, 1.42), 0.05, material)
-    left_hand_joint = _add_sphere(stage, f"{root}/MotionRig/LeftHand", (-1.9, y_offset - 0.18, 1.12), 0.04, material)
-    right_hand_joint = _add_sphere(stage, f"{root}/MotionRig/RightHand", (-1.9, y_offset + 0.18, 1.12), 0.04, material)
-    left_foot_joint = _add_sphere(stage, f"{root}/MotionRig/LeftFoot", (-1.9, y_offset - 0.08, 0.08), 0.035, material)
-    right_foot_joint = _add_sphere(stage, f"{root}/MotionRig/RightFoot", (-1.9, y_offset + 0.08, 0.08), 0.035, material)
-    left_forearm = _add_cube(stage, f"{root}/MotionRig/LeftForearm", (-1.9, y_offset - 0.17, 1.12), (0.055, 0.012, 0.012), material)
-    right_forearm = _add_cube(stage, f"{root}/MotionRig/RightForearm", (-1.9, y_offset + 0.17, 1.12), (0.055, 0.012, 0.012), material)
+    left_target = _add_cube(stage, f"{root}/LeftHandTarget", (-1.9, y_offset - 0.16, 1.12), (0.045, 0.045, 0.045), material)
+    right_target = _add_cube(stage, f"{root}/RightHandTarget", (-1.9, y_offset + 0.16, 1.12), (0.045, 0.045, 0.045), material)
+    tool_token = _add_cube(stage, f"{root}/ToolToken", (-1.9, y_offset, 0.98), (0.10, 0.055, 0.035), material)
+    torso_joint = _add_sphere(stage, f"{root}/MotionRig/Torso", (-1.9, y_offset, 1.06), 0.075, materials["motion_white"])
+    head_joint = _add_sphere(stage, f"{root}/MotionRig/Head", (-1.9, y_offset, 1.42), 0.07, material)
+    left_shoulder_joint = _add_sphere(stage, f"{root}/MotionRig/LeftShoulder", (-1.9, y_offset - 0.12, 1.24), 0.045, material)
+    right_shoulder_joint = _add_sphere(stage, f"{root}/MotionRig/RightShoulder", (-1.9, y_offset + 0.12, 1.24), 0.045, material)
+    left_hand_joint = _add_sphere(stage, f"{root}/MotionRig/LeftHand", (-1.9, y_offset - 0.22, 1.12), 0.055, material)
+    right_hand_joint = _add_sphere(stage, f"{root}/MotionRig/RightHand", (-1.9, y_offset + 0.22, 1.12), 0.055, material)
+    left_foot_joint = _add_sphere(stage, f"{root}/MotionRig/LeftFoot", (-1.9, y_offset - 0.09, 0.08), 0.05, material)
+    right_foot_joint = _add_sphere(stage, f"{root}/MotionRig/RightFoot", (-1.9, y_offset + 0.09, 0.08), 0.05, material)
+    left_upper_arm = _add_cube(stage, f"{root}/MotionRig/LeftUpperArm", (-1.9, y_offset - 0.17, 1.18), (0.075, 0.018, 0.018), material)
+    right_upper_arm = _add_cube(stage, f"{root}/MotionRig/RightUpperArm", (-1.9, y_offset + 0.17, 1.18), (0.075, 0.018, 0.018), material)
+    left_forearm = _add_cube(stage, f"{root}/MotionRig/LeftForearm", (-1.9, y_offset - 0.20, 1.12), (0.09, 0.018, 0.018), material)
+    right_forearm = _add_cube(stage, f"{root}/MotionRig/RightForearm", (-1.9, y_offset + 0.20, 1.12), (0.09, 0.018, 0.018), material)
+    left_leg_bar = _add_cube(stage, f"{root}/MotionRig/LeftLegBar", (-1.9, y_offset - 0.09, 0.44), (0.05, 0.018, 0.22), material)
+    right_leg_bar = _add_cube(stage, f"{root}/MotionRig/RightLegBar", (-1.9, y_offset + 0.09, 0.44), (0.05, 0.018, 0.22), material)
     success_token = _add_cube(stage, f"{root}/StatusTokens/Success", (-1.9, y_offset, -1.0), (0.08, 0.035, 0.035), materials["success_green"])
     failure_token = _add_cube(stage, f"{root}/StatusTokens/Failure", (-1.9, y_offset, -1.0), (0.09, 0.045, 0.045), materials["failure_red"])
     recovery_token = _add_cube(stage, f"{root}/StatusTokens/Recovery", (-1.9, y_offset, -1.0), (0.08, 0.04, 0.04), materials["warning_amber"])
@@ -517,24 +537,30 @@ def _write_humanoid_actor(
         )
         torso_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.08 + (0.04 if segment.status == "failed" else 0.0)), frame)
         head_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + (0.04 if segment.status == "failed" else 0.0), y_offset, 1.43), frame)
+        left_shoulder_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.02, y_offset - 0.14, 1.24), frame)
+        right_shoulder_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.02, y_offset + 0.14, 1.24), frame)
         left_hand_joint.GetOrderedXformOps()[0].Set(
-            Gf.Vec3d(segment.left_hand_xyz[0], y_offset - 0.20, segment.left_hand_xyz[2]),
+            Gf.Vec3d(segment.left_hand_xyz[0], y_offset - 0.26, segment.left_hand_xyz[2]),
             frame,
         )
         right_hand_joint.GetOrderedXformOps()[0].Set(
-            Gf.Vec3d(segment.right_hand_xyz[0], y_offset + 0.20, segment.right_hand_xyz[2]),
+            Gf.Vec3d(segment.right_hand_xyz[0], y_offset + 0.26, segment.right_hand_xyz[2]),
             frame,
         )
         left_foot_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x - gait * foot_phase, y_offset - 0.08, 0.08), frame)
         right_foot_joint.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + gait * foot_phase, y_offset + 0.08, 0.08), frame)
+        left_upper_arm.GetOrderedXformOps()[0].Set(Gf.Vec3d((x + segment.left_hand_xyz[0]) / 2, y_offset - 0.20, 1.19), frame)
+        right_upper_arm.GetOrderedXformOps()[0].Set(Gf.Vec3d((x + segment.right_hand_xyz[0]) / 2, y_offset + 0.20, 1.19), frame)
         left_forearm.GetOrderedXformOps()[0].Set(
-            Gf.Vec3d((x + segment.left_hand_xyz[0]) / 2, y_offset - 0.19, (1.12 + segment.left_hand_xyz[2]) / 2),
+            Gf.Vec3d((x + segment.left_hand_xyz[0]) / 2, y_offset - 0.25, (1.12 + segment.left_hand_xyz[2]) / 2),
             frame,
         )
         right_forearm.GetOrderedXformOps()[0].Set(
-            Gf.Vec3d((x + segment.right_hand_xyz[0]) / 2, y_offset + 0.19, (1.12 + segment.right_hand_xyz[2]) / 2),
+            Gf.Vec3d((x + segment.right_hand_xyz[0]) / 2, y_offset + 0.25, (1.12 + segment.right_hand_xyz[2]) / 2),
             frame,
         )
+        left_leg_bar.GetOrderedXformOps()[0].Set(Gf.Vec3d(x - gait * foot_phase / 2, y_offset - 0.09, 0.44), frame)
+        right_leg_bar.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + gait * foot_phase / 2, y_offset + 0.09, 0.44), frame)
         success_token.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, status_z if segment.status == "success" else -1.0), frame)
         failure_token.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, status_z if segment.status == "failed" else -1.0), frame)
         recovery_token.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, status_z if segment.status == "recovery" else -1.0), frame)

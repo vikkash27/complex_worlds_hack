@@ -8,6 +8,70 @@ from robocerebra_rl.humanoid_motion import MotionSegment
 
 G1_GROUPS = ("left_leg", "right_leg", "left_arm", "right_arm", "torso")
 
+G1_LINK_CHAINS = {
+    "left_hip_pitch_link": ("pelvis", "left_hip_pitch_link"),
+    "left_hip_roll_link": ("pelvis", "left_hip_pitch_link", "left_hip_roll_link"),
+    "left_hip_yaw_link": ("pelvis", "left_hip_pitch_link", "left_hip_roll_link", "left_hip_yaw_link"),
+    "left_knee_link": ("pelvis", "left_hip_pitch_link", "left_hip_roll_link", "left_hip_yaw_link", "left_knee_link"),
+    "left_ankle_pitch_link": (
+        "pelvis",
+        "left_hip_pitch_link",
+        "left_hip_roll_link",
+        "left_hip_yaw_link",
+        "left_knee_link",
+        "left_ankle_pitch_link",
+    ),
+    "right_hip_pitch_link": ("pelvis", "right_hip_pitch_link"),
+    "right_hip_roll_link": ("pelvis", "right_hip_pitch_link", "right_hip_roll_link"),
+    "right_hip_yaw_link": ("pelvis", "right_hip_pitch_link", "right_hip_roll_link", "right_hip_yaw_link"),
+    "right_knee_link": ("pelvis", "right_hip_pitch_link", "right_hip_roll_link", "right_hip_yaw_link", "right_knee_link"),
+    "right_ankle_pitch_link": (
+        "pelvis",
+        "right_hip_pitch_link",
+        "right_hip_roll_link",
+        "right_hip_yaw_link",
+        "right_knee_link",
+        "right_ankle_pitch_link",
+    ),
+    "torso_link": ("torso_link",),
+    "left_shoulder_pitch_link": ("torso_link", "left_shoulder_pitch_link"),
+    "left_shoulder_roll_link": ("torso_link", "left_shoulder_pitch_link", "left_shoulder_roll_link"),
+    "left_shoulder_yaw_link": ("torso_link", "left_shoulder_pitch_link", "left_shoulder_roll_link", "left_shoulder_yaw_link"),
+    "left_elbow_link": (
+        "torso_link",
+        "left_shoulder_pitch_link",
+        "left_shoulder_roll_link",
+        "left_shoulder_yaw_link",
+        "left_elbow_link",
+    ),
+    "left_wrist_roll_link": (
+        "torso_link",
+        "left_shoulder_pitch_link",
+        "left_shoulder_roll_link",
+        "left_shoulder_yaw_link",
+        "left_elbow_link",
+        "left_wrist_roll_link",
+    ),
+    "right_shoulder_pitch_link": ("torso_link", "right_shoulder_pitch_link"),
+    "right_shoulder_roll_link": ("torso_link", "right_shoulder_pitch_link", "right_shoulder_roll_link"),
+    "right_shoulder_yaw_link": ("torso_link", "right_shoulder_pitch_link", "right_shoulder_roll_link", "right_shoulder_yaw_link"),
+    "right_elbow_link": (
+        "torso_link",
+        "right_shoulder_pitch_link",
+        "right_shoulder_roll_link",
+        "right_shoulder_yaw_link",
+        "right_elbow_link",
+    ),
+    "right_wrist_roll_link": (
+        "torso_link",
+        "right_shoulder_pitch_link",
+        "right_shoulder_roll_link",
+        "right_shoulder_yaw_link",
+        "right_elbow_link",
+        "right_wrist_roll_link",
+    ),
+}
+
 
 @dataclass(frozen=True)
 class G1JointTargets:
@@ -21,6 +85,18 @@ class G1LinkPose:
     link_name: str
     rotate_xyz: tuple[float, float, float]
     translate_xyz: tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+
+def g1_link_path_candidates(asset_root: str, link_name: str) -> tuple[str, ...]:
+    root = asset_root.rstrip("/")
+    candidates = [f"{root}/{link_name}"]
+    chain = G1_LINK_CHAINS.get(link_name)
+    if chain:
+        candidates.append(f"{root}/{'/'.join(chain)}")
+    if link_name != "torso_link":
+        candidates.append(f"{root}/torso_link/{link_name}")
+        candidates.append(f"{root}/pelvis/{link_name}")
+    return tuple(dict.fromkeys(candidates))
 
 
 def classify_g1_joint(name: str) -> str | None:
