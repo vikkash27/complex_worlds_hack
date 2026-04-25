@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 
@@ -20,12 +21,24 @@ ISAAC_ASSET_CANDIDATES: dict[str, tuple[str, ...]] = {
         "/Isaac/Props/YCB/Axis_Aligned/003_cracker_box.usd",
     ),
     "humanoid": (
+        # Isaac Sim ships G1 under Unitree; see Robot Assets in docs (Create > Isaac > Robots > Unitree > G1).
+        "/Isaac/Robots/Unitree/G1/g1.usd",
+        "/Isaac/Robots/Unitree/G1/g1_minimal.usd",
         "/Isaac/Robots/Unitree/H1/h1.usd",
         "/Isaac/Robots/Unitree/H1/h1_with_hand.usd",
         "/Isaac/Robots/IsaacSim/Humanoid/humanoid.usd",
         "/Isaac/Robots/IsaacSim/Humanoid/humanoid_instanceable.usd",
     ),
 }
+
+
+def humanoid_asset_candidates() -> tuple[str, ...]:
+    """Prefer Unitree G1; allow a local/override USD first when Nucleus paths are locked."""
+    base = ISAAC_ASSET_CANDIDATES["humanoid"]
+    override = os.environ.get("ROBOCEREBRA_HUMANOID_USD", "").strip()
+    if override:
+        return (override, *base)
+    return base
 
 
 @dataclass(frozen=True)
@@ -117,7 +130,7 @@ def make_humanoid_showcase_scene_plan(
 ) -> HumanoidShowcaseScenePlan:
     return HumanoidShowcaseScenePlan(
         title="RoboCerebra Humanoid OpenReward Showcase",
-        humanoid_asset_candidates=ISAAC_ASSET_CANDIDATES["humanoid"],
+        humanoid_asset_candidates=humanoid_asset_candidates(),
         materials=(
             MaterialSpec("humanoid_silver", (0.76, 0.80, 0.86), roughness=0.32),
             MaterialSpec("policy_blue", (0.04, 0.22, 0.95), roughness=0.35),

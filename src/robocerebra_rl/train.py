@@ -5,8 +5,7 @@ import random
 from statistics import mean
 
 from robocerebra_rl.rewards import sparse_success_reward, symbolic_dense_reward
-from robocerebra_rl.eval import randomized_world
-from robocerebra_rl.world import ACTIONS, BreakfastTrayWorld
+from robocerebra_rl.world import ACTIONS, BreakfastTrayWorld, randomized_world
 
 
 @dataclass
@@ -21,8 +20,9 @@ class TabularPolicy:
         return max(ACTIONS, key=lambda action: values.get(action, 0.0))
 
 
-def policy_state(world: BreakfastTrayWorld) -> tuple[int, bool, bool, str]:
+def policy_state(world: BreakfastTrayWorld) -> tuple[str, int, bool, bool, str]:
     return (
+        world.task_name,
         world.progress_index,
         world.inspected,
         world.replanned,

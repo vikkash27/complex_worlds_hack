@@ -74,9 +74,12 @@ Then in the streamed Isaac UI:
 ## 3b. Generate the humanoid long-horizon showcase USD
 
 The humanoid showcase uses the same OpenReward/RoboCerebra trace contract, but
-with a 100+ event long-horizon hospitality task. It references built-in Isaac
-humanoid assets first (`Unitree/H1` and `IsaacSim/Humanoid`) and keeps an
-animated fallback skeleton if those assets are unavailable.
+with a 100+ event long-horizon hospitality task. It references **Unitree G1**
+first (`/Isaac/Robots/Unitree/G1/g1.usd`), then other built-in humanoids. The
+content browser may show padlocks; USD still resolves those paths from the Isaac
+install. If not, set `ROBOCEREBRA_HUMANOID_USD` to a **file** path to a G1 USD you
+copied into the repo volume. Block “mocap” proxies are off by default; set
+`ROBOCEREBRA_HUMANOID_PROXY=1` only for debugging.
 
 ```bash
 docker exec -it isaac-sim bash -lc 'cd /workspace/complex_worlds_hack && /isaac-sim/python.sh scripts/isaac/replay_breakfast_tray.py \
@@ -156,3 +159,8 @@ set -a && source .env && set +a
 ```
 
 Set `ROBOCEREBRA_USE_GEMINI_VISION=1` and `GEMINI_MODEL=<available-model-id>` only when you want paid/nondeterministic Gemini vision scoring. Without those env vars, the same benchmark uses deterministic fallback scoring.
+
+When you pass `--compare-policy`, the script also emits
+`artifacts/openreward/submission_benchmark_summary.json` with both policies'
+metrics plus the lift block—use it as a single attachment for write-ups or
+leaderboard submissions.

@@ -14,5 +14,17 @@
     "success": 1.0,
     "ticks": 1287.0,
     "tool_calls": 9.0
+  },
+  "humanoid_baseline_long_horizon": {
+    "execute_skill_calls": 34.0,
+    "reward": 4.624997,
+    "success": 1.0,
+    "tool_events": 133.0
+  },
+  "humanoid_trained_long_horizon": {
+    "execute_skill_calls": 30.0,
+    "reward": 4.824997,
+    "success": 1.0,
+    "tool_events": 121.0
   }
 }

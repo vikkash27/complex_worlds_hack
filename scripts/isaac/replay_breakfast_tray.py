@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -237,6 +238,20 @@ def _write_humanoid_stage(stage, scene_plan: HumanoidShowcaseScenePlan, material
     _write_humanoid_actor(stage, "/World/TrainedHumanoid", scene_plan.trained_events, 0.78, materials["policy_blue"], scene_plan)
 
 
+def _humanoid_root_scale() -> tuple[float, float, float]:
+    """Uniform or XYZ scale for the referenced humanoid USD (G1 is authored near real-world size)."""
+    raw = os.environ.get("ROBOCEREBRA_HUMANOID_SCALE", "1.0").strip()
+    try:
+        if "," in raw:
+            parts = [float(x) for x in raw.split(",")]
+            if len(parts) == 3:
+                return (parts[0], parts[1], parts[2])
+        v = float(raw)
+        return (v, v, v)
+    except ValueError:
+        return (1.0, 1.0, 1.0)
+
+
 def _write_humanoid_actor(
     stage,
     root: str,
@@ -247,21 +262,38 @@ def _write_humanoid_actor(
 ) -> None:
     from pxr import Gf  # type: ignore[import-not-found]
 
+    # Block proxies were hiding the real referenced robot; G1 is the default asset. Re-enable with ROBOCEREBRA_HUMANOID_PROXY=1.
+    use_proxy = os.environ.get("ROBOCEREBRA_HUMANOID_PROXY", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
     root_prim = stage.DefinePrim(root, "Xform")
     root_prim.SetDisplayName("Baseline humanoid" if y_offset < 0 else "Trained humanoid")
+    scale = _humanoid_root_scale()
     humanoid_asset = _add_asset_reference(
         stage,
         f"{root}/HumanoidAsset",
         scene_plan.humanoid_asset_candidates,
         (-1.9, y_offset, 0.85),
-        (0.28, 0.28, 0.28),
+        scale,
     )
-    torso = _add_cube(stage, f"{root}/ProxyTorso", (-1.9, y_offset, 1.08), (0.12, 0.08, 0.28), material)
-    head = _add_cube(stage, f"{root}/ProxyHead", (-1.9, y_offset, 1.43), (0.075, 0.075, 0.075), materials_or_default(material))
-    left_arm = _add_cube(stage, f"{root}/LeftArm", (-1.9, y_offset - 0.12, 1.15), (0.045, 0.035, 0.18), material)
-    right_arm = _add_cube(stage, f"{root}/RightArm", (-1.9, y_offset + 0.12, 1.15), (0.045, 0.035, 0.18), material)
-    left_leg = _add_cube(stage, f"{root}/LeftLeg", (-1.9, y_offset - 0.055, 0.72), (0.045, 0.035, 0.24), material)
-    right_leg = _add_cube(stage, f"{root}/RightLeg", (-1.9, y_offset + 0.055, 0.72), (0.045, 0.035, 0.24), material)
+    proxy_prims: list[object] = []
+    if use_proxy:
+        proxy_prims = [
+            _add_cube(stage, f"{root}/ProxyTorso", (-1.9, y_offset, 1.08), (0.12, 0.08, 0.28), material),
+            _add_cube(
+                stage,
+                f"{root}/ProxyHead",
+                (-1.9, y_offset, 1.43),
+                (0.075, 0.075, 0.075),
+                materials_or_default(material),
+            ),
+            _add_cube(stage, f"{root}/LeftArm", (-1.9, y_offset - 0.12, 1.15), (0.045, 0.035, 0.18), material),
+            _add_cube(stage, f"{root}/RightArm", (-1.9, y_offset + 0.12, 1.15), (0.045, 0.035, 0.18), material),
+            _add_cube(stage, f"{root}/LeftLeg", (-1.9, y_offset - 0.055, 0.72), (0.045, 0.035, 0.24), material),
+            _add_cube(stage, f"{root}/RightLeg", (-1.9, y_offset + 0.055, 0.72), (0.045, 0.035, 0.24), material),
+        ]
     stations = {"pantry": -1.7, "counter": -0.85, "sink": 0.0, "table": 0.85, "delivery": 1.7}
     for event in events:
         if event.get("tool_name") != "execute_skill":
@@ -271,12 +303,13 @@ def _write_humanoid_actor(
         frame = int(summary.get("frame_index") or 0)
         x = stations.get(station, 0.0)
         humanoid_asset.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 0.85), frame)
-        torso.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.08), frame)
-        head.GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.43), frame)
-        left_arm.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.04, y_offset - 0.15, 1.12), frame)
-        right_arm.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.12, y_offset + 0.15, 1.12), frame)
-        left_leg.GetOrderedXformOps()[0].Set(Gf.Vec3d(x - 0.04, y_offset - 0.055, 0.72), frame)
-        right_leg.GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.04, y_offset + 0.055, 0.72), frame)
+        if use_proxy and proxy_prims:
+            proxy_prims[0].GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.08), frame)
+            proxy_prims[1].GetOrderedXformOps()[0].Set(Gf.Vec3d(x, y_offset, 1.43), frame)
+            proxy_prims[2].GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.04, y_offset - 0.15, 1.12), frame)
+            proxy_prims[3].GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.12, y_offset + 0.15, 1.12), frame)
+            proxy_prims[4].GetOrderedXformOps()[0].Set(Gf.Vec3d(x - 0.04, y_offset - 0.055, 0.72), frame)
+            proxy_prims[5].GetOrderedXformOps()[0].Set(Gf.Vec3d(x + 0.04, y_offset + 0.055, 0.72), frame)
 
 
 def materials_or_default(material: object) -> object:

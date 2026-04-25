@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import hashlib
 import math
 import random
-from typing import Iterable
+from typing import Any, Iterable
 
 
 SUBGOALS = [
@@ -384,3 +384,116 @@ def iter_policy_actions(policy: str | Iterable[str] | object, world: BreakfastTr
         return "wait"
     index = min(world.macro_steps, len(actions) - 1)
     return actions[index]
+
+
+# Canonical task order for OpenReward splits (train 64 / validation 16 / test 16).
+OPENREWARD_TASK_ORDER: tuple[str, ...] = tuple(TASK_LIBRARY.keys())
+
+OPENREWARD_SPLIT_SEEDS: dict[str, tuple[int, ...]] = {
+    "train": tuple(range(1, 17)),
+    "validation": tuple(range(1001, 1005)),
+    "test": tuple(range(1005, 1009)),
+}
+
+
+def scene_for_split_and_seed(seed: int) -> SceneConfig:
+    base = SceneConfig.from_seed(seed)
+    if seed < 1000:
+        return base
+    return SceneConfig(
+        mug_position=base.mug_position,
+        snack_position=base.snack_position,
+        tray_position=base.tray_position,
+        disturbance_tick=base.disturbance_tick,
+        distractor_count=max(2, base.distractor_count),
+        action_failure_prob=max(0.18, base.action_failure_prob),
+        disturbance_severity=max(0.7, base.disturbance_severity),
+    )
+
+
+def horizon_ticks_for_seed(seed: int) -> int:
+    return 1000 + (seed % 3) * 250
+
+
+def max_macro_steps_for(task_name: str, seed: int) -> int:
+    template = TASK_LIBRARY.get(task_name)
+    if template is None:
+        raise ValueError(f"Unknown task_name: {task_name!r}")
+    n = len(template.subgoals)
+    hard = seed >= 1000
+    if task_name == "humanoid_hospitality":
+        return n + (25 if hard else 15)
+    if hard:
+        return max(24, n + 8)
+    return max(30, n + 10)
+
+
+def openreward_task_dict(split: str, seed: int, task_name: str) -> dict[str, Any]:
+    if task_name not in TASK_LIBRARY:
+        raise ValueError(f"Unknown task_name: {task_name!r}")
+    if split not in OPENREWARD_SPLIT_SEEDS:
+        raise ValueError(f"Unknown split: {split!r}")
+    if seed not in OPENREWARD_SPLIT_SEEDS[split]:
+        raise ValueError(f"Seed {seed} is not part of split {split!r}")
+    scene = scene_for_split_and_seed(seed)
+    return {
+        "task_id": f"{task_name.replace('_', '-')}-{seed}",
+        "task_name": task_name,
+        "task_label": TASK_LIBRARY[task_name].label,
+        "seed": seed,
+        "horizon_ticks": horizon_ticks_for_seed(seed),
+        "max_macro_steps": max_macro_steps_for(task_name, seed),
+        "scene": scene.as_dict(),
+        "instruction": TASK_LIBRARY[task_name].instruction,
+    }
+
+
+def list_openreward_tasks_for_split(split: str) -> list[dict[str, Any]]:
+    if split not in OPENREWARD_SPLIT_SEEDS:
+        return []
+    return [
+        openreward_task_dict(split, seed, task_name)
+        for seed in OPENREWARD_SPLIT_SEEDS[split]
+        for task_name in OPENREWARD_TASK_ORDER
+    ]
+
+
+def scene_from_spec_dict(value: object, *, seed: int) -> SceneConfig:
+    if not isinstance(value, dict) or not value:
+        return scene_for_split_and_seed(seed)
+    default = SceneConfig()
+    return SceneConfig(
+        mug_position=tuple(value.get("mug_position", default.mug_position)),  # type: ignore[arg-type]
+        snack_position=tuple(value.get("snack_position", default.snack_position)),  # type: ignore[arg-type]
+        tray_position=tuple(value.get("tray_position", default.tray_position)),  # type: ignore[arg-type]
+        disturbance_tick=int(value.get("disturbance_tick", default.disturbance_tick)),
+        distractor_count=int(value.get("distractor_count", default.distractor_count)),
+        action_failure_prob=float(value.get("action_failure_prob", default.action_failure_prob)),
+        disturbance_severity=float(value.get("disturbance_severity", default.disturbance_severity)),
+    )
+
+
+def world_from_task_spec(spec: dict[str, Any]) -> BreakfastTrayWorld:
+    seed = int(spec.get("seed", 0))
+    task_name = str(spec.get("task_name", "breakfast_tray"))
+    scene = scene_from_spec_dict(spec.get("scene"), seed=seed)
+    horizon = int(spec.get("horizon_ticks", horizon_ticks_for_seed(seed)))
+    max_macro = int(spec.get("max_macro_steps", max_macro_steps_for(task_name, seed)))
+    return BreakfastTrayWorld(
+        seed=seed,
+        horizon_ticks=horizon,
+        max_macro_steps=max_macro,
+        scene=scene,
+        task_name=task_name,
+    )
+
+
+def randomized_world(seed: int, task_name: str = "breakfast_tray") -> BreakfastTrayWorld:
+    scene = scene_for_split_and_seed(seed)
+    return BreakfastTrayWorld(
+        seed=seed,
+        horizon_ticks=horizon_ticks_for_seed(seed),
+        max_macro_steps=max_macro_steps_for(task_name, seed),
+        scene=scene,
+        task_name=task_name,
+    )

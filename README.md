@@ -63,7 +63,13 @@ Core tools:
 
 ## Benchmark Task
 
-The workflow is a 7-stage breakfast-tray task:
+The OpenReward splits ship **64 train, 16 validation, and 16 test** tasks. Each
+split cycles four embodied families (breakfast tray, spill recovery, countertop
+cleanup, and a 30-stage humanoid hospitality chain) over fixed seed grids so
+hosted sessions, local training, and `scripts/benchmark_openreward.py` share the
+same `scene`, `horizon_ticks`, and task-aware `max_macro_steps` budgets.
+
+The flagship workflow is a 7-stage breakfast-tray task:
 
 1. Locate items.
 2. Clear workspace.
@@ -74,7 +80,11 @@ The workflow is a 7-stage breakfast-tray task:
 7. Deliver tray.
 
 Each macro-action advances the simulator by enough internal ticks to produce a
-500-2000 tick long-horizon episode while keeping live tool calls manageable.
+long-horizon episode (typically 1000–1500 ticks) while keeping live tool calls
+manageable. The humanoid task stretches the same tool API to 30 sequential
+subgoals for 100+ OpenReward tool-call demos when `observe`, `choose_subgoal`,
+`execute_skill`, and `score_progress` are chained (see
+`docs/hackathon_demo_runbook.md`).
 
 ## Metrics
 
@@ -115,3 +125,14 @@ This MVP is a macro-level physical-AI benchmark slice, not full continuous robot
 control. The purpose is to demonstrate a verifiable long-horizon evaluation and
 dense reward strategy that can later be connected to real RoboCerebra/LIBERO
 rollouts.
+
+## License
+
+Released under the [MIT License](LICENSE).
+
+## Hosted benchmark bundle
+
+When comparing two scripted policies through OpenReward, pass
+`--compare-policy` to `scripts/benchmark_openreward.py`. Besides the per-policy
+JSON files, it also writes `artifacts/openreward/submission_benchmark_summary.json`
+with both metric dicts and the lift summary for judge-facing write-ups.

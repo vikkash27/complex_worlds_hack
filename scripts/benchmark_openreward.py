@@ -16,8 +16,7 @@ if str(SRC) not in sys.path:
 load_dotenv(override=False)
 
 from robocerebra_rl.eval import ci95_for_rate
-from robocerebra_rl.world import iter_policy_actions
-from robocerebra_rl.world import BreakfastTrayWorld, SceneConfig
+from robocerebra_rl.world import iter_policy_actions, world_from_task_spec
 
 
 def summarize_policy_comparison(
@@ -75,7 +74,8 @@ def evaluate_environment(
     for episode in range(episodes):
         task = tasks[episode % len(tasks)]
         task_spec = getattr(task, "task_spec", task)
-        local_world = _world_from_task_spec(task_spec)
+        spec_dict = task_spec if isinstance(task_spec, dict) else {}
+        local_world = world_from_task_spec(spec_dict)
         episode_reward = 0.0
         calls = 0
 
@@ -176,27 +176,6 @@ def evaluate_environment(
     return metrics
 
 
-def _world_from_task_spec(task_spec: object) -> BreakfastTrayWorld:
-    spec = task_spec if isinstance(task_spec, dict) else {}
-    scene_spec = spec.get("scene") if isinstance(spec.get("scene"), dict) else {}
-    scene = SceneConfig(
-        mug_position=tuple(scene_spec.get("mug_position", SceneConfig().mug_position)),  # type: ignore[arg-type]
-        snack_position=tuple(scene_spec.get("snack_position", SceneConfig().snack_position)),  # type: ignore[arg-type]
-        tray_position=tuple(scene_spec.get("tray_position", SceneConfig().tray_position)),  # type: ignore[arg-type]
-        disturbance_tick=int(scene_spec.get("disturbance_tick", SceneConfig().disturbance_tick)),
-        distractor_count=int(scene_spec.get("distractor_count", SceneConfig().distractor_count)),
-        action_failure_prob=float(scene_spec.get("action_failure_prob", SceneConfig().action_failure_prob)),
-        disturbance_severity=float(scene_spec.get("disturbance_severity", SceneConfig().disturbance_severity)),
-    )
-    return BreakfastTrayWorld(
-        seed=int(spec.get("seed", 0)),
-        horizon_ticks=int(spec.get("horizon_ticks", 1000)),
-        max_macro_steps=int(spec.get("max_macro_steps", 30)),
-        scene=scene,
-        task_name=str(spec.get("task_name", "breakfast_tray")),
-    )
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark RoboCerebra Reward Lab through OpenReward.")
     parser.add_argument("--environment", default="vikkash/complex_worlds_hack")
@@ -243,6 +222,18 @@ def main() -> None:
         output["comparison"] = comparison
         summary_path = args.output.with_name(f"{args.output.stem}_comparison_summary.json")
         summary_path.write_text(json.dumps(output, indent=2, sort_keys=True), encoding="utf-8")
+        submission_path = args.output.parent / "submission_benchmark_summary.json"
+        submission_payload = {
+            "environment": args.environment,
+            "split": args.split,
+            "episodes": args.episodes,
+            "score_progress": args.score_progress,
+            "task_name_filter": args.task_name,
+            "metrics_primary": metrics,
+            "metrics_compare": compare_metrics,
+            "comparison": comparison,
+        }
+        submission_path.write_text(json.dumps(submission_payload, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(output, indent=2, sort_keys=True))
 
 

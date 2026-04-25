@@ -109,6 +109,10 @@ set -a && source .env && set +a
   --output artifacts/openreward/hosted_expert_results.json
 ```
 
+Add `--compare-policy reactive_script` (or another baseline) to also write
+`artifacts/openreward/submission_benchmark_summary.json`, which bundles both
+policies' metrics and the lift summary for judges.
+
 Before hosted deployment is linked, test the same script against the local
 server by passing `--base-url http://127.0.0.1:8080` and `--environment
 robocerebra_reward_lab`.

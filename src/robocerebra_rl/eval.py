@@ -7,27 +7,7 @@ from statistics import mean
 from typing import Iterable
 
 from robocerebra_rl.rewards import symbolic_dense_reward
-from robocerebra_rl.world import BreakfastTrayWorld, SceneConfig, iter_policy_actions
-
-
-def randomized_world(seed: int) -> BreakfastTrayWorld:
-    scene = SceneConfig.from_seed(seed)
-    if seed >= 1000:
-        scene = SceneConfig(
-            mug_position=scene.mug_position,
-            snack_position=scene.snack_position,
-            tray_position=scene.tray_position,
-            disturbance_tick=scene.disturbance_tick,
-            distractor_count=max(2, scene.distractor_count),
-            action_failure_prob=max(0.18, scene.action_failure_prob),
-            disturbance_severity=max(0.7, scene.disturbance_severity),
-        )
-    return BreakfastTrayWorld(
-        seed=seed,
-        horizon_ticks=1000 + (seed % 3) * 250,
-        max_macro_steps=18 if seed >= 1000 else 30,
-        scene=scene,
-    )
+from robocerebra_rl.world import BreakfastTrayWorld, iter_policy_actions, randomized_world
 
 
 def ci95_for_rate(rate: float, n: int) -> list[float]:

@@ -6,9 +6,9 @@
   "disturbance_recovery_rate": 1.0,
   "episodes": 60,
   "mean_progress": 1.0,
-  "mean_reward": 3.3,
-  "mean_ticks": 1287,
-  "mean_tool_calls": 9,
+  "mean_reward": 3.4,
+  "mean_ticks": 1001,
+  "mean_tool_calls": 7,
   "success_rate": 1.0,
   "success_rate_ci95": [
     1.0,

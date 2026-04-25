@@ -20,8 +20,8 @@ if str(SRC) not in sys.path:
 
 load_dotenv(override=False)
 
-from robocerebra_rl.eval import evaluate_policy
-from robocerebra_rl.eval import compare_policies, randomized_world
+from robocerebra_rl.eval import compare_policies, evaluate_policy
+from robocerebra_rl.world import randomized_world
 from robocerebra_rl.render import render_world, save_replay
 from robocerebra_rl.rewards import GeminiRewardCache, gemini_reward_scorer, symbolic_dense_reward
 from robocerebra_rl.trace import ToolTraceLogger

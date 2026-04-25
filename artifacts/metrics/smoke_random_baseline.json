@@ -1,12 +1,12 @@
 {
   "disturbance_recovery_ci95": [
     0.0,
-    0.049061
+    0.0
   ],
-  "disturbance_recovery_rate": 0.016667,
+  "disturbance_recovery_rate": 0.0,
   "episodes": 60,
-  "mean_progress": 0.266667,
-  "mean_reward": -0.328453,
+  "mean_progress": 0.042857,
+  "mean_reward": -0.813214,
   "mean_ticks": 2574,
   "mean_tool_calls": 18,
   "success_rate": 0.0,

@@ -22,7 +22,15 @@ from pydantic import BaseModel, Field
 from robocerebra_rl.render import render_world
 from robocerebra_rl.rewards import GeminiRewardCache, gemini_reward_scorer, symbolic_dense_reward
 from robocerebra_rl.trace import ToolTraceLogger
-from robocerebra_rl.world import ACTIONS, TASK_LIBRARY, BreakfastTrayWorld, SceneConfig
+from robocerebra_rl.world import (
+    ACTIONS,
+    TASK_LIBRARY,
+    BreakfastTrayWorld,
+    horizon_ticks_for_seed,
+    list_openreward_tasks_for_split,
+    max_macro_steps_for,
+    scene_from_spec_dict,
+)
 
 
 class ChooseSubgoalInput(BaseModel):
@@ -42,13 +50,17 @@ class RoboCerebraRewardLabEnv(Environment):
         load_dotenv(override=False)
         super().__init__(task_spec or {}, secrets or {})
         spec = task_spec or {}
-        scene = _scene_from_spec(spec.get("scene"))
+        seed = int(spec.get("seed", 0))
+        task_name = str(spec.get("task_name", "breakfast_tray"))
+        scene = scene_from_spec_dict(spec.get("scene"), seed=seed)
+        horizon = int(spec.get("horizon_ticks", horizon_ticks_for_seed(seed)))
+        max_macro = int(spec.get("max_macro_steps", max_macro_steps_for(task_name, seed)))
         self.world = BreakfastTrayWorld(
-            seed=int(spec.get("seed", 0)),
-            horizon_ticks=int(spec.get("horizon_ticks", 1000)),
-            max_macro_steps=int(spec.get("max_macro_steps", 30 if scene != SceneConfig() else 18)),
+            seed=seed,
+            horizon_ticks=horizon,
+            max_macro_steps=max_macro,
             scene=scene,
-            task_name=str(spec.get("task_name", "breakfast_tray")),
+            task_name=task_name,
         )
         self.current_subgoal = self.world.expected_action
         scorer = gemini_reward_scorer() if os.getenv("ROBOCEREBRA_USE_GEMINI_VISION") == "1" else None
@@ -74,33 +86,7 @@ class RoboCerebraRewardLabEnv(Environment):
 
     @classmethod
     def list_tasks(cls, split: str) -> list[dict[str, Any]]:
-        seeds = {"train": [1, 2, 3], "validation": [1001], "test": [2001, 2002, 2003, 2004]}.get(split, [0])
-        task_names = ["breakfast_tray", "spill_recovery", "countertop_cleanup", "humanoid_hospitality"]
-        return [
-            {
-                "task_id": f"{task_name.replace('_', '-')}-{seed}",
-                "task_name": task_name,
-                "task_label": TASK_LIBRARY[task_name].label,
-                "seed": seed,
-                "horizon_ticks": 1000 + (seed % 2) * 500,
-                "max_macro_steps": 18 if seed >= 1000 else 30,
-                "scene": (
-                    SceneConfig.from_seed(seed).as_dict()
-                    if seed < 1000
-                    else SceneConfig(
-                        **{
-                            **SceneConfig.from_seed(seed).as_dict(),
-                            "distractor_count": max(2, SceneConfig.from_seed(seed).distractor_count),
-                            "action_failure_prob": max(0.18, SceneConfig.from_seed(seed).action_failure_prob),
-                            "disturbance_severity": max(0.7, SceneConfig.from_seed(seed).disturbance_severity),
-                        }
-                    ).as_dict()
-                ),
-                "instruction": TASK_LIBRARY[task_name].instruction,
-            }
-            for seed in seeds
-            for task_name in task_names
-        ]
+        return list_openreward_tasks_for_split(split)
 
     def get_prompt(self) -> list[TextBlock]:
         return [
@@ -307,20 +293,6 @@ class RoboCerebraRewardLabEnv(Environment):
             finished=finished,
             state_hash=state_hash or self.world.state_hash(),
         )
-
-
-def _scene_from_spec(value: object) -> SceneConfig:
-    if not isinstance(value, dict):
-        return SceneConfig()
-    return SceneConfig(
-        mug_position=tuple(value.get("mug_position", SceneConfig().mug_position)),  # type: ignore[arg-type]
-        snack_position=tuple(value.get("snack_position", SceneConfig().snack_position)),  # type: ignore[arg-type]
-        tray_position=tuple(value.get("tray_position", SceneConfig().tray_position)),  # type: ignore[arg-type]
-        disturbance_tick=int(value.get("disturbance_tick", SceneConfig().disturbance_tick)),
-        distractor_count=int(value.get("distractor_count", SceneConfig().distractor_count)),
-        action_failure_prob=float(value.get("action_failure_prob", SceneConfig().action_failure_prob)),
-        disturbance_severity=float(value.get("disturbance_severity", SceneConfig().disturbance_severity)),
-    )
 
 
 def create_server() -> Server:

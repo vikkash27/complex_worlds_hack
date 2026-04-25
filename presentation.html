@@ -513,7 +513,7 @@
 <div class="progress-line" id="progressLine"></div>
 
 <!-- Slide number -->
-<div class="slide-num-badge" id="slideNumBadge">01 / 02</div>
+<div class="slide-num-badge" id="slideNumBadge">01 / 05</div>
 
 <!-- ═══════ DECK ═══════ -->
 <div class="deck" id="deck">
@@ -606,14 +606,8 @@
         <span class="card-icon">⚡</span>
         <p class="card-heading">Dense vs Sparse Rewards</p>
         <p class="card-body" style="margin-bottom:0.6rem">
-          Gemini-style VLM scoring at every subgoal boundary — not just at episode end.
+          Optional Gemini-style VLM scoring at subgoal boundaries; the default path stays deterministic so demos run without API keys. After <code style="font-size:0.85em">scripts/run_demo.py</code>, see <code style="font-size:0.85em">artifacts/metrics/leaderboard.json</code> for dense vs reactive-script lifts on randomized held-out scenes.
         </p>
-        <div class="progress-demo">
-          <div class="prog-label"><span>Sparse (success-only)</span><span style="color:#f97316">38%</span></div>
-          <div class="prog-track"><div class="prog-fill fill-sparse"></div></div>
-          <div class="prog-label"><span>Dense (our method)</span><span style="color:#67e8f9">82%</span></div>
-          <div class="prog-track"><div class="prog-fill fill-dense"></div></div>
-        </div>
         <div class="tag-row" style="margin-top:0.8rem">
           <span class="tag tag-gold">Gemini API</span>
           <span class="tag tag-gold">Tabular Q-Learning</span>
@@ -640,6 +634,41 @@
     </div>
   </div><!-- /slide-2 -->
 
+  <!-- ─── SLIDE 3 ─── -->
+  <div class="slide" id="slide-3">
+    <div class="slide-inner">
+      <p class="title-eyebrow">OpenReward surface</p>
+      <h1 class="title-main" style="font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.15;">64 train · 16 val · 16 test</h1>
+      <p class="title-sub" style="max-width: 38rem;">
+        Four embodied task families repeat across curated seeds: breakfast tray, spill recovery, countertop cleanup, and a 30-stage humanoid hospitality chain. Task specs for hosted sessions use the same scene, horizon, and macro-step budgets as local training and <code style="font-size:0.88em">scripts/benchmark_openreward.py</code>.
+      </p>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 4 ─── -->
+  <div class="slide" id="slide-4">
+    <div class="slide-inner">
+      <p class="title-eyebrow">Claims we can defend</p>
+      <h1 class="title-main" style="font-size: clamp(1.7rem, 3.8vw, 2.6rem); line-height: 1.15;">Macro planning &amp; tool policy</h1>
+      <p class="title-sub" style="max-width: 40rem;">
+        Success is decided by the simulator at episode end, not an LLM judge. Isaac Sim replays the same JSONL traces the OpenReward tools emit—high-fidelity visualization of decisions, not continuous-control RL inside Isaac. This complements verifier-grounded code envs and long-horizon stochastic sims elsewhere in the hackathon.
+      </p>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 5 ─── -->
+  <div class="slide" id="slide-5">
+    <div class="slide-inner">
+      <p class="title-eyebrow">Evidence &amp; repro</p>
+      <h1 class="title-main" style="font-size: clamp(1.8rem, 4vw, 2.7rem); line-height: 1.15;">Artifacts judges can open</h1>
+      <p class="title-sub" style="max-width: 42rem; text-align: left;">
+        <strong>Local:</strong> <code style="font-size:0.85em">python scripts/run_demo.py</code> → leaderboard, GIFs, humanoid traces.<br/>
+        <strong>Report:</strong> <code style="font-size:0.85em">python scripts/build_visual_report.py</code> → <code style="font-size:0.85em">artifacts/visual_report/index.html</code>.<br/>
+        <strong>Hosted compare:</strong> run <code style="font-size:0.85em">scripts/benchmark_openreward.py</code> with <code style="font-size:0.85em">--compare-policy</code> to emit <code style="font-size:0.85em">submission_benchmark_summary.json</code> alongside per-policy rollouts.
+      </p>
+    </div>
+  </div>
+
 </div><!-- /deck -->
 
 <!-- ── NAVIGATION ── -->
@@ -652,7 +681,7 @@
 <div class="key-hint"><kbd>←</kbd> <kbd>→</kbd> to navigate</div>
 
 <script>
-  const TOTAL = 2;
+  const TOTAL = 5;
   let current = 0;
   let animating = false;
 

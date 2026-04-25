@@ -1,7 +1,7 @@
 import json
 
 from robocerebra_rl.isaac_scene import (
-    ISAAC_ASSET_CANDIDATES,
+    humanoid_asset_candidates,
     make_humanoid_showcase_scene_plan,
 )
 from robocerebra_rl.world import ACTIONS, TASK_LIBRARY, BreakfastTrayWorld
@@ -9,16 +9,24 @@ from scripts.isaac.replay_breakfast_tray import asset_candidates_custom_data, lo
 from scripts.run_demo import generate_humanoid_showcase_trace
 
 
-def test_humanoid_assets_are_prioritized_with_proxy_fallback():
-    assert "humanoid" in ISAAC_ASSET_CANDIDATES
-    candidates = ISAAC_ASSET_CANDIDATES["humanoid"]
-    assert any("Unitree/H1" in candidate for candidate in candidates)
-    assert any("Humanoid" in candidate for candidate in candidates)
+def test_humanoid_assets_prioritize_unitree_g1(monkeypatch):
+    monkeypatch.delenv("ROBOCEREBRA_HUMANOID_USD", raising=False)
+    candidates = humanoid_asset_candidates()
+    assert candidates[0] == "/Isaac/Robots/Unitree/G1/g1.usd"
+    assert any("Unitree/H1" in c for c in candidates)
+    assert any("Humanoid" in c for c in candidates)
 
     plan = make_humanoid_showcase_scene_plan(baseline_events=[], trained_events=[])
     assert plan.title == "RoboCerebra Humanoid OpenReward Showcase"
     assert plan.humanoid_asset_candidates == candidates
     assert plan.camera.position[2] > 3.0
+
+
+def test_robocerebra_humanoid_usd_override_prepends(monkeypatch):
+    monkeypatch.setenv("ROBOCEREBRA_HUMANOID_USD", "/workspace/artifacts/isaac/robots/g1.usd")
+    candidates = humanoid_asset_candidates()
+    assert candidates[0] == "/workspace/artifacts/isaac/robots/g1.usd"
+    assert "/Isaac/Robots/Unitree/G1/g1.usd" in candidates
 
 
 def test_humanoid_hospitality_task_has_long_horizon_micro_actions():
