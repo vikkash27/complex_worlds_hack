@@ -44,6 +44,8 @@ Inside the container:
     --trained-trace artifacts/traces/dense_trained.jsonl \\
     --output-dir artifacts/isaac
 
-For livestream, expose ports 49100 and 47998 in Brev, then run:
+For livestream (only after you are *inside* the running Isaac container; on the Brev *host* /isaac-sim does not exist):
+  Expose ports 49100 (TCP) and 47998 (UDP) in Brev to your client IP, then in the *same* container shell:
+  cd /isaac-sim
   PUBLIC_IP=${PUBLIC_IP} ./runheadless.sh --/app/livestream/publicEndpointAddress=${PUBLIC_IP} --/app/livestream/port=49100
 EOF
