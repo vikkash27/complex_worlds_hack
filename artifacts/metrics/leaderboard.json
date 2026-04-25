@@ -1,165 +1,176 @@
 {
-  "benchmark": "RoboCerebra Reward Lab",
-  "deterministic_smoke_test": {
-    "dense_trained_policy": {
-      "disturbance_recovery_ci95": [
-        1.0,
-        1.0
-      ],
-      "disturbance_recovery_rate": 1.0,
-      "episodes": 60,
-      "mean_progress": 1.0,
-      "mean_reward": 3.4,
-      "mean_ticks": 1001,
-      "mean_tool_calls": 7,
-      "success_rate": 1.0,
-      "success_rate_ci95": [
-        1.0,
-        1.0
-      ],
-      "task_regime": "deterministic_smoke_test"
-    },
-    "random_baseline": {
-      "disturbance_recovery_ci95": [
-        0.0,
-        0.0
-      ],
-      "disturbance_recovery_rate": 0.0,
-      "episodes": 60,
-      "mean_progress": 0.042857,
-      "mean_reward": -0.813214,
-      "mean_ticks": 2574,
-      "mean_tool_calls": 18,
-      "success_rate": 0.0,
-      "success_rate_ci95": [
-        0.0,
-        0.0
-      ],
-      "task_regime": "deterministic_smoke_test"
-    }
-  },
+  "benchmark": "RoboCerebra Reward Lab \u2014 Shift Mode",
   "headline": {
-    "progress_lift": 0.546429,
-    "reward_auc_lift": 3.635714,
-    "success_lift": 0.725
+    "max_tool_calls_test_expert": 1701,
+    "p50_tool_calls_test_expert": 1659.5,
+    "success_rate_test_expert": 1.0,
+    "success_rate_test_reactive": 0.0,
+    "tool_call_factor_expert_vs_reactive": 1.47
   },
-  "randomized_heldout": {
-    "dense_trained": {
-      "disturbance_recovery_ci95": [
-        1.0,
-        1.0
-      ],
-      "disturbance_recovery_rate": 1.0,
-      "episodes": 80,
-      "mean_progress": 1.0,
-      "mean_reward": 3.185,
-      "mean_ticks": 2011,
-      "mean_tool_calls": 11.3,
-      "success_rate": 1.0,
-      "success_rate_ci95": [
-        1.0,
-        1.0
-      ],
-      "task_regime": "randomized_heldout"
+  "policies": {
+    "test::expert": {
+      "episodes": 8,
+      "max_tool_calls": 1701,
+      "mean_completed_jobs": 32,
+      "mean_events_handled": 9,
+      "mean_failed_jobs": 0,
+      "mean_inventory_restocks": 3.75,
+      "mean_memory_recalls": 2,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 275.62,
+      "mean_tool_calls": 1660.9,
+      "mean_tool_diversity": 17,
+      "median_tool_calls": 1659.5,
+      "min_tool_calls": 1607,
+      "policy": "expert",
+      "split": "test",
+      "success_rate": 1.0
     },
-    "expert_oracle": {
-      "disturbance_recovery_ci95": [
-        1.0,
-        1.0
-      ],
-      "disturbance_recovery_rate": 1.0,
-      "episodes": 80,
-      "mean_progress": 1.0,
-      "mean_reward": 3.22125,
-      "mean_ticks": 1896.975,
-      "mean_tool_calls": 10.575,
-      "success_rate": 1.0,
-      "success_rate_ci95": [
-        1.0,
-        1.0
-      ],
-      "task_regime": "randomized_heldout"
+    "test::random": {
+      "episodes": 8,
+      "max_tool_calls": 9,
+      "mean_completed_jobs": 0,
+      "mean_events_handled": 0,
+      "mean_failed_jobs": 0.38,
+      "mean_inventory_restocks": 0,
+      "mean_memory_recalls": 0,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 0,
+      "mean_tool_calls": 2.8,
+      "mean_tool_diversity": 2.38,
+      "median_tool_calls": 2.0,
+      "min_tool_calls": 1,
+      "policy": "random",
+      "split": "test",
+      "success_rate": 0.0
     },
-    "fixed_script": {
-      "disturbance_recovery_ci95": [
-        0.0,
-        0.0
-      ],
-      "disturbance_recovery_rate": 0.0,
-      "episodes": 80,
-      "mean_progress": 0.0,
-      "mean_reward": -1.2,
-      "mean_ticks": 4306.8,
-      "mean_tool_calls": 24,
-      "success_rate": 0.0,
-      "success_rate_ci95": [
-        0.0,
-        0.0
-      ],
-      "task_regime": "randomized_heldout"
+    "test::reactive_script": {
+      "episodes": 8,
+      "max_tool_calls": 1248,
+      "mean_completed_jobs": 30,
+      "mean_events_handled": 0,
+      "mean_failed_jobs": 0,
+      "mean_inventory_restocks": 0,
+      "mean_memory_recalls": 0,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 0,
+      "mean_tool_calls": 1128.8,
+      "mean_tool_diversity": 7,
+      "median_tool_calls": 1180.0,
+      "min_tool_calls": 874,
+      "policy": "reactive_script",
+      "split": "test",
+      "success_rate": 0.0
     },
-    "random": {
-      "disturbance_recovery_ci95": [
-        0.0,
-        0.0
-      ],
-      "disturbance_recovery_rate": 0.0,
-      "episodes": 80,
-      "mean_progress": 0.014286,
-      "mean_reward": -1.171429,
-      "mean_ticks": 4306.8,
-      "mean_tool_calls": 24,
-      "success_rate": 0.0,
-      "success_rate_ci95": [
-        0.0,
-        0.0
-      ],
-      "task_regime": "randomized_heldout"
+    "train::expert": {
+      "episodes": 8,
+      "max_tool_calls": 639,
+      "mean_completed_jobs": 12,
+      "mean_events_handled": 3,
+      "mean_failed_jobs": 0,
+      "mean_inventory_restocks": 2.62,
+      "mean_memory_recalls": 1,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 103.38,
+      "mean_tool_calls": 625.5,
+      "mean_tool_diversity": 16,
+      "median_tool_calls": 633.5,
+      "min_tool_calls": 598,
+      "policy": "expert",
+      "split": "train",
+      "success_rate": 1.0
     },
-    "reactive_script": {
-      "disturbance_recovery_ci95": [
-        0.177153,
-        0.372847
-      ],
-      "disturbance_recovery_rate": 0.275,
-      "episodes": 80,
-      "mean_progress": 0.453571,
-      "mean_reward": 0.422053,
-      "mean_ticks": 3585.4625,
-      "mean_tool_calls": 19.9375,
-      "success_rate": 0.275,
-      "success_rate_ci95": [
-        0.177153,
-        0.372847
-      ],
-      "task_regime": "randomized_heldout"
+    "train::random": {
+      "episodes": 8,
+      "max_tool_calls": 7,
+      "mean_completed_jobs": 0,
+      "mean_events_handled": 0,
+      "mean_failed_jobs": 0.62,
+      "mean_inventory_restocks": 0,
+      "mean_memory_recalls": 0,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 0,
+      "mean_tool_calls": 4.4,
+      "mean_tool_diversity": 3.38,
+      "median_tool_calls": 5.0,
+      "min_tool_calls": 1,
+      "policy": "random",
+      "split": "train",
+      "success_rate": 0.0
     },
-    "sparse_trained": {
-      "disturbance_recovery_ci95": [
-        0.0,
-        0.0
-      ],
-      "disturbance_recovery_rate": 0.0,
-      "episodes": 80,
-      "mean_progress": 0.0,
-      "mean_reward": -1.2,
-      "mean_ticks": 4296,
-      "mean_tool_calls": 24,
-      "success_rate": 0.0,
-      "success_rate_ci95": [
-        0.0,
-        0.0
-      ],
-      "task_regime": "randomized_heldout"
+    "train::reactive_script": {
+      "episodes": 8,
+      "max_tool_calls": 524,
+      "mean_completed_jobs": 12,
+      "mean_events_handled": 0,
+      "mean_failed_jobs": 0,
+      "mean_inventory_restocks": 0,
+      "mean_memory_recalls": 0,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 0,
+      "mean_tool_calls": 471.5,
+      "mean_tool_diversity": 7,
+      "median_tool_calls": 468.0,
+      "min_tool_calls": 416,
+      "policy": "reactive_script",
+      "split": "train",
+      "success_rate": 0.0
+    },
+    "validation::expert": {
+      "episodes": 8,
+      "max_tool_calls": 1258,
+      "mean_completed_jobs": 23,
+      "mean_events_handled": 6,
+      "mean_failed_jobs": 0,
+      "mean_inventory_restocks": 2.88,
+      "mean_memory_recalls": 1,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 198.25,
+      "mean_tool_calls": 1195.1,
+      "mean_tool_diversity": 17,
+      "median_tool_calls": 1188.5,
+      "min_tool_calls": 1158,
+      "policy": "expert",
+      "split": "validation",
+      "success_rate": 1.0
+    },
+    "validation::random": {
+      "episodes": 8,
+      "max_tool_calls": 9,
+      "mean_completed_jobs": 0,
+      "mean_events_handled": 0,
+      "mean_failed_jobs": 0.25,
+      "mean_inventory_restocks": 0,
+      "mean_memory_recalls": 0,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 0,
+      "mean_tool_calls": 2.9,
+      "mean_tool_diversity": 2.38,
+      "median_tool_calls": 2.0,
+      "min_tool_calls": 1,
+      "policy": "random",
+      "split": "validation",
+      "success_rate": 0.0
+    },
+    "validation::reactive_script": {
+      "episodes": 8,
+      "max_tool_calls": 1030,
+      "mean_completed_jobs": 22,
+      "mean_events_handled": 0,
+      "mean_failed_jobs": 0,
+      "mean_inventory_restocks": 0,
+      "mean_memory_recalls": 0,
+      "mean_plan_revisions": 0,
+      "mean_score_progress_calls": 0,
+      "mean_tool_calls": 841,
+      "mean_tool_diversity": 7,
+      "median_tool_calls": 845.0,
+      "min_tool_calls": 708,
+      "policy": "reactive_script",
+      "split": "validation",
+      "success_rate": 0.0
     }
   },
-  "result_type": "randomized_heldout_benchmark",
-  "sample_vlm_reward": {
-    "confidence": 0.72,
-    "irreversible_error": false,
-    "progress_delta": 0.142857,
-    "rationale": "```json\n{\n  \"progress_delta\": 0.142857,\n  \"subgoal_complete\": false,\n  \"irreversible_error\": false,\n  \"confidence\": 1.0,\n  \"rationale\": \"The simulator reports a progress delta of 0.142857 for the 'locate_items' action within the 'locate_items' subgoal. This positive delta indicates partial progress,",
-    "subgoal_complete": true
-  },
-  "task": "breakfast_tray_disturbance"
+  "result_type": "shift_mode_benchmark",
+  "task": "long_horizon_multi_job_shift"
 }

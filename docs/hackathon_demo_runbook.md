@@ -149,35 +149,26 @@ Second terminal:
   --base-url http://127.0.0.1:8080 \
   --environment robocerebra_reward_lab \
   --split test \
-  --episodes 12 \
+  --episodes 4 \
   --policy reactive_script \
   --compare-policy expert \
   --score-progress \
   --output artifacts/openreward/local_reactive_vs_expert_results.json
 ```
 
-This reports per-policy `mean_tool_calls`, `total_tool_calls`, and comparison
-`aggregate_tool_calls`. For the long-horizon single-episode claim, use the
-humanoid trace metrics in `artifacts/metrics/replay_rollouts.json`.
+This reports per-shift `mean_tool_calls`, `p50_tool_calls`, `max_tool_calls`,
+`mean_events_handled`, `mean_memory_recalls`, `mean_inventory_restocks`, and
+`mean_tool_diversity`, plus comparison aggregates. The expected result on
+`test`:
 
-To back the 100+ call claim through OpenReward rather than only local traces,
-run a filtered single-episode humanoid benchmark:
+| Policy | success_rate | median tool_calls | events_handled | memory_recalls |
+|--------|-------------:|-------------------:|----------------:|----------------:|
+| `expert` | **1.0** | **~1660** | 9 | ≥1 |
+| `reactive_script` | 0.0 | ~1130 | 0 | 0 |
+| `random` | 0.0 | <10 | 0 | 0 |
 
-```bash
-.venv/bin/python scripts/benchmark_openreward.py \
-  --base-url http://127.0.0.1:8080 \
-  --environment robocerebra_reward_lab \
-  --split test \
-  --episodes 1 \
-  --task-name humanoid_hospitality \
-  --policy expert \
-  --score-progress \
-  --output artifacts/openreward/local_humanoid_100_call_episode.json
-```
-
-With `--score-progress`, the benchmark records `observe`, `choose_subgoal`,
-`execute_skill`, and `score_progress` around each humanoid micro-step, producing
-100+ OpenReward tool calls in one long-horizon episode.
+(The reactive baseline still emits ~1130 calls per shift but fails because
+it never acknowledges scheduled events or summarizes memory.)
 
 Hosted OpenReward:
 
@@ -202,3 +193,29 @@ When you pass `--compare-policy`, the script also emits
 `artifacts/openreward/submission_benchmark_summary.json` with both policies'
 metrics plus the lift block—use it as a single attachment for write-ups or
 leaderboard submissions.
+
+## 5. MuJoCo G1 offline showcase
+
+Use this if you need a reliable moving-joint artifact instead of a live Isaac
+USD replay. It uses MuJoCo Menagerie Unitree G1 assets and the same
+RoboCerebra/OpenReward traces:
+
+```bash
+cd ~/complex_worlds_hack
+bash scripts/mujoco/run_g1_showcase.sh
+```
+
+Outputs:
+
+- `artifacts/mujoco/g1_openreward_showcase.gif`
+- `artifacts/mujoco/g1_openreward_showcase_summary.json`
+
+The summary reports baseline/optimized execute calls, failures, recoveries, and
+total tool calls. If MuJoCo is not installed, the renderer falls back to a
+deterministic storyboard GIF that still shows the baseline wait/recovery chain
+versus the optimized smooth chain. For real MuJoCo rendering:
+
+```bash
+.venv/bin/python -m pip install mujoco
+.venv/bin/python scripts/mujoco/render_g1_showcase.py --backend mujoco
+```

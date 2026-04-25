@@ -1,16 +1,20 @@
-# RoboCerebra Reward Lab
+# RoboCerebra Reward Lab — Shift Mode
 
-RoboCerebra Reward Lab is a same-day hackathon benchmark slice for long-horizon
-physical-AI planning. It wraps a RoboCerebra/LIBERO-style household manipulation
-workflow as an OpenReward environment and demonstrates that dense subgoal rewards
-make a macro-policy learn faster than sparse success-only feedback.
+RoboCerebra Reward Lab is an OpenReward benchmark for **long-horizon
+physical-AI planning**. Each episode is a full **hospitality shift** — a
+deterministic chain of 12–30 manipulation jobs with persistent inventory,
+memory, a clock, a ticket queue, and scheduled non-stationary events.
+A capable agent burns **~1660 tool calls per test episode** to win; the
+strongest hand-written baseline burns ~1130 and still fails.
 
 ## Winning Claim
 
-Frontier agents struggle when physical workflows require memory, recovery, and
-long-horizon credit assignment. This project turns a 1000-tick breakfast-tray
-manipulation workflow into an OpenReward tool-call environment with dense
-Gemini-style reward scoring at semantic subgoal boundaries.
+Frontier agents are mostly evaluated on short tasks where one good guess
+ends the rollout. RoboCerebra Reward Lab forces the opposite: success
+requires *long-horizon planning, memory recall under non-stationarity,
+inventory tracking, event handling, and eventual self-summarization* —
+all wired through 18 OpenReward tools that an agent must compose for
+hundreds-to-thousands of calls before earning the success bit.
 
 ## Quick Start
 
@@ -63,45 +67,58 @@ Core tools:
 - `score_progress`: returns cached Gemini-style progress scoring.
 - `submit_done`: terminates the episode with final success reward.
 
-## Benchmark Task
+## Benchmark Task — Long-Horizon Shift Mode
 
-The OpenReward splits ship **76 train, 16 validation, and 16 test** tasks (**108**
-total: four task families × curated seeds). Each
-split cycles four embodied families (breakfast tray, spill recovery, countertop
-cleanup, and a 30-stage humanoid hospitality chain) over fixed seed grids so
-hosted sessions, local training, and `scripts/benchmark_openreward.py` share the
-same `scene`, `horizon_ticks`, and task-aware `max_macro_steps` budgets.
+Each OpenReward task is a full **hospitality shift**: a chain of 12–30 jobs
+(breakfast tray, spill recovery, countertop cleanup) running on persistent
+shift state — **inventory, memory, clock, ticket queue, deterministic
+non-stationary events** — until the agent can submit a verified shift
+summary. This is what gives us *hundreds-to-thousands of tool calls per
+episode*.
 
-The flagship workflow is a 7-stage breakfast-tray task:
+| Split | Shifts | Jobs / shift | Events / shift | Median expert tool calls |
+|-------|------:|-------------:|---------------:|--------------------------:|
+| `train` | 76 | 12 | 3 | **~634** |
+| `validation` | 16 | 22 | 6 | **~1189** |
+| `test` | 16 | 30 | 9 | **~1660** |
 
-1. Locate items.
-2. Clear workspace.
-3. Pick mug.
-4. Fill drink.
-5. Place snack.
-6. Recover from a tray disturbance.
-7. Deliver tray.
+(`test` shifts can grow past 1700 calls when scheduled `spill` events insert
+extra recovery jobs.)
 
-Each macro-action advances the simulator by enough internal ticks to produce a
-long-horizon episode (typically 1000–1500 ticks) while keeping live tool calls
-manageable. The humanoid task stretches the same tool API to 30 sequential
-subgoals for 100+ OpenReward tool-call demos when `observe`, `choose_subgoal`,
-`execute_skill`, and `score_progress` are chained (see
-`docs/hackathon_demo_runbook.md`).
+**Tool surface (18 tools)**:
+
+- Per-job loop: `observe`, `choose_subgoal`, `execute_skill`, `score_progress`.
+- Plan & memory: `read_ticket`, `plan_create`, `plan_revise`,
+  `memory_write`, `memory_read`, `memory_search`, `memory_summarize`.
+- Resource & time: `inventory_check`, `inventory_consume`, `inventory_restock`,
+  `clock_get`.
+- Disturbance lifecycle: `acknowledge_event`, `log_job`, `submit_done`.
+
+**Why this is hard but tractable**:
+
+- *Long horizon*: 1500–1700 expert tool calls on `test`; reactive baseline
+  pushes ~1130 calls and still fails because it never acknowledges events
+  or summarizes memory.
+- *Capability tangent*: success requires real planning, recall via
+  `memory_search`, inventory restocking on stockouts, and `plan_revise` on
+  VIP / time-pressure events.
+- *Solvable*: the deterministic per-seed expert oracle solves every shift
+  with **100% success** within budget, proving tractability.
 
 ## Metrics
 
-`scripts/run_demo.py` evaluates:
+`artifacts/metrics/leaderboard.json` reports per-policy (`expert`,
+`reactive_script`, `random`) numbers per split, including:
 
-- Random macro-action baseline.
-- Fixed-script and reactive-script baselines on randomized held-out scenes.
-- Sparse-trained and dense-reward tabular macro-policies.
-- Expert oracle ceiling.
+- `success_rate` — gated on completing every job, acknowledging every
+  scheduled event, and a passing `memory_summarize`.
+- `mean_tool_calls`, `median_tool_calls`, `min/max_tool_calls`.
+- `mean_events_handled`, `mean_memory_recalls`, `mean_inventory_restocks`,
+  `mean_score_progress_calls`, `mean_tool_diversity`.
 
-The leaderboard JSON reports success rate, mean progress, dense reward, mean
-ticks, disturbance recovery rate, confidence intervals, tool-call counts, and
-headline lift over the stronger reactive-script baseline. The old deterministic
-100% result is kept only under `deterministic_smoke_test`.
+Headline result on `test`: **expert 100% success @ ~1660 median calls** vs
+**reactive 0% success @ ~1130 calls** — same long-horizon work, only the
+capability-rich policy wins.
 
 ## Two-Minute Pitch
 

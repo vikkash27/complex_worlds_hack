@@ -10,3 +10,7 @@ dashboard/dist/
 dashboard/node_modules/
 .env
 artifacts/isaac/vendor/
+artifacts/mujoco/vendor/
+artifacts/mujoco/*.gif
+artifacts/mujoco/*.mp4
+artifacts/mujoco/vendor/

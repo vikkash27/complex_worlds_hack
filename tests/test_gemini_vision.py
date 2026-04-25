@@ -110,7 +110,12 @@ async def test_env_uses_gemini_scorer_when_flag_set(tmp_path, monkeypatch):
     monkeypatch.setenv("ROBOCEREBRA_REWARD_CACHE", str(tmp_path / "vlm_cache.json"))
     monkeypatch.setenv("GEMINI_API_KEY", "fake")
 
-    from robocerebra_rl.env import ExecuteSkillInput, RoboCerebraRewardLabEnv, ScoreProgressInput
+    from robocerebra_rl.env import (
+        ExecuteSkillInput,
+        PlanCreateInput,
+        RoboCerebraShiftEnv,
+        ScoreProgressInput,
+    )
 
     def stub_scorer(payload):
         return {
@@ -123,10 +128,12 @@ async def test_env_uses_gemini_scorer_when_flag_set(tmp_path, monkeypatch):
 
     monkeypatch.setattr("robocerebra_rl.env.gemini_reward_scorer", lambda model=None: stub_scorer)
 
-    env = RoboCerebraRewardLabEnv(RoboCerebraRewardLabEnv.list_tasks("train")[0])
+    env = RoboCerebraShiftEnv(RoboCerebraShiftEnv.list_tasks("train")[0])
+    ticket = (await env.read_ticket()).metadata["ticket"]
+    await env.plan_create(PlanCreateInput(steps=[f"execute::{s}" for s in ticket["subgoals"]]))
     await env.execute_skill(ExecuteSkillInput(action="inspect_scene"))
-    await env.execute_skill(ExecuteSkillInput(action="locate_items"))
-    result = await env.score_progress(ScoreProgressInput(subgoal="locate_items"))
+    await env.execute_skill(ExecuteSkillInput(action=ticket["subgoals"][0]))
+    result = await env.score_progress(ScoreProgressInput(subgoal=ticket["subgoals"][0]))
 
     assert result.metadata["progress_delta"] == 0.99
     assert result.metadata["confidence"] == 0.66

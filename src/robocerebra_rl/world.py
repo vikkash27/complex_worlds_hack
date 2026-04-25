@@ -498,3 +498,32 @@ def randomized_world(seed: int, task_name: str = "breakfast_tray") -> BreakfastT
         scene=scene,
         task_name=task_name,
     )
+
+
+# ---------------------------------------------------------------------------
+# Shift-mode OpenReward task list (long-horizon multi-job episodes).
+# ---------------------------------------------------------------------------
+
+
+SHIFT_SPLIT_SEEDS: dict[str, tuple[int, ...]] = {
+    "train": tuple(range(2001, 2077)),       # 76 shifts
+    "validation": tuple(range(3001, 3017)),  # 16 shifts
+    "test": tuple(range(4001, 4017)),        # 16 shifts
+}
+
+
+def list_openreward_shift_tasks_for_split(split: str) -> list[dict[str, Any]]:
+    """Return shift task specs (one per seed) for OpenReward `list_tasks`.
+
+    Each task is an entire long-horizon shift with its own job/event schedule.
+    """
+    if split not in SHIFT_SPLIT_SEEDS:
+        return []
+    # Local import to avoid a circular import at module load time.
+    from robocerebra_rl.shift import build_shift_spec
+
+    out: list[dict[str, Any]] = []
+    for seed in SHIFT_SPLIT_SEEDS[split]:
+        spec = build_shift_spec(split=split, seed=seed)
+        out.append(spec.as_dict())
+    return out
