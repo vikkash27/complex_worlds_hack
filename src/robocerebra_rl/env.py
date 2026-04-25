@@ -70,12 +70,25 @@ class RoboCerebraRewardLabEnv(Environment):
 
     @classmethod
     def list_tasks(cls, split: str) -> list[dict[str, Any]]:
-        seeds = {"train": [1, 2, 3], "validation": [101], "test": [201, 202]}.get(split, [0])
+        seeds = {"train": [1, 2, 3], "validation": [1001], "test": [2001, 2002, 2003, 2004]}.get(split, [0])
         return [
             {
                 "task_id": f"breakfast-tray-{seed}",
                 "seed": seed,
                 "horizon_ticks": 1000 + (seed % 2) * 500,
+                "max_macro_steps": 18 if seed >= 1000 else 30,
+                "scene": (
+                    SceneConfig.from_seed(seed).as_dict()
+                    if seed < 1000
+                    else SceneConfig(
+                        **{
+                            **SceneConfig.from_seed(seed).as_dict(),
+                            "distractor_count": max(2, SceneConfig.from_seed(seed).distractor_count),
+                            "action_failure_prob": max(0.18, SceneConfig.from_seed(seed).action_failure_prob),
+                            "disturbance_severity": max(0.7, SceneConfig.from_seed(seed).disturbance_severity),
+                        }
+                    ).as_dict()
+                ),
                 "instruction": (
                     "Prepare and deliver a breakfast tray under a mid-task disturbance. "
                     "Use macro-skills and ask for progress scores at subgoal boundaries."
