@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "For Python/pip: use scripts/bootstrap_dev_env.sh (upgrades pip first; project needs Python 3.11+ and openreward from current PyPI)."
+echo "If pip install -e . failed with 'No matching distribution' for openreward, your pip was too old; upgrade before install."
+echo ""
 echo "Run this on an RTX-capable Brev VM (L40S/L40/A10/A10G/L4)."
 echo "It prepares the Isaac Sim container cache directories and prints the run command."
 

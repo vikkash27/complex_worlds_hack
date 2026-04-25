@@ -50,11 +50,10 @@ git clone https://github.com/vikkash27/complex_worlds_hack.git
 cd complex_worlds_hack
 ```
 
-Install and regenerate artifacts:
+Install and regenerate artifacts (use **Python 3.11+** and upgrade pip first; on stock Ubuntu, `bash scripts/bootstrap_dev_env.sh` does both):
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -e ".[dev]"
+bash scripts/bootstrap_dev_env.sh
 .venv/bin/python scripts/run_demo.py
 .venv/bin/python scripts/build_visual_report.py
 .venv/bin/python scripts/build_side_by_side.py
@@ -101,3 +100,9 @@ artifacts/isaac/isaac_replay_summary.json
 ```
 
 Open the USD in Isaac Sim or stream the Brev viewport for the before/after demo.
+
+## 5. Headless livestream (WebRTC)
+
+After `bash scripts/brev_setup_isaac.sh`, expose **TCP 49100** and **UDP 47998** from the Brev instance to your machine, then start headless streaming with the printed `runheadless.sh` command (use the VM’s public IP for `publicEndpointAddress`).
+
+**Viewing:** use NVIDIA’s **Isaac Sim WebRTC Streaming Client** (download from the [Isaac Sim 5.0 livestream clients](https://docs.isaacsim.omniverse.nvidia.com/5.0.0/installation/manual_livestream_clients.html) documentation). In the client, connect to **`<PUBLIC_IP>:49100`** (replace with your instance address). This is a small desktop app; the default path is not a generic browser URL. Some newer docs describe an optional **browser** viewer via a separate web stack (for example on port 8210 with Docker); that is not what `brev_setup_isaac.sh` prints by default.
