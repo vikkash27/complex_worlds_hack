@@ -4,6 +4,8 @@ import base64
 from io import BytesIO
 from typing import Any
 
+from dotenv import load_dotenv
+
 from openreward.environments import (
     Environment,
     ImageBlock,
@@ -34,6 +36,7 @@ class ScoreProgressInput(BaseModel):
 
 class RoboCerebraRewardLabEnv(Environment):
     def __init__(self, task_spec: dict[str, Any] | None = None, secrets: dict[str, str] | None = None):
+        load_dotenv(override=False)
         super().__init__(task_spec or {}, secrets or {})
         spec = task_spec or {}
         self.world = BreakfastTrayWorld(

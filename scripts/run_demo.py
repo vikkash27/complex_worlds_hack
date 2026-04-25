@@ -9,10 +9,14 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from dotenv import load_dotenv
+
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
+
+load_dotenv(override=False)
 
 from robocerebra_rl.eval import evaluate_policy
 from robocerebra_rl.render import render_world, save_replay
