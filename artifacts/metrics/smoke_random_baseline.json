@@ -1,0 +1,18 @@
+{
+  "disturbance_recovery_ci95": [
+    0.0,
+    0.049061
+  ],
+  "disturbance_recovery_rate": 0.016667,
+  "episodes": 60,
+  "mean_progress": 0.266667,
+  "mean_reward": -0.328453,
+  "mean_ticks": 2574,
+  "mean_tool_calls": 18,
+  "success_rate": 0.0,
+  "success_rate_ci95": [
+    0.0,
+    0.0
+  ],
+  "task_regime": "deterministic_smoke_test"
+}

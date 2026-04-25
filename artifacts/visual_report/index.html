@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoboCerebra Reward Lab Demo</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f7f7f5; color: #171717; }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 56px; }
+    h1 { font-size: 30px; margin-bottom: 6px; }
+    h2 { margin-top: 34px; }
+    .subtitle { color: #555; margin-top: 0; max-width: 820px; line-height: 1.5; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 24px 0; }
+    .stat { background: white; border: 1px solid #d9d9d4; border-radius: 12px; padding: 18px; }
+    .stat strong { display: block; font-size: 28px; margin-bottom: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .panel { background: white; border: 1px solid #d9d9d4; border-radius: 12px; padding: 18px; }
+    img { max-width: 100%; border: 1px solid #d9d9d4; border-radius: 10px; background: white; }
+    code { background: #ececea; padding: 2px 5px; border-radius: 5px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #e3e3df; padding: 9px 7px; text-align: left; }
+    th { color: #555; font-weight: 600; }
+    @media (max-width: 800px) { .stats, .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>RoboCerebra Reward Lab</h1>
+  <p class="subtitle">Dense Gemini-style subgoal rewards are evaluated on randomized held-out physical-AI scenes. The old deterministic 100% result is now treated as a smoke test; the headline below compares the dense policy against a stronger fixed-script baseline under distractors, action failures, and disturbance variations.</p>
+
+  <section class="stats">
+    <div class="stat"><strong>+0.545</strong><span>progress_lift</span></div>
+    <div class="stat"><strong>+0.713</strong><span>success_lift</span></div>
+    <div class="stat"><strong>+2.296</strong><span>reward_auc_lift</span></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Reactive-Script Baseline</h2>
+      <p>Success rate: <strong>27.5%</strong><br />
+      Mean progress: <strong>45.4%</strong><br />
+      Disturbance recovery: <strong>27.5%</strong><br />
+      Tool calls: <strong>15.6</strong></p>
+      <img src="../replays/baseline_random.gif" alt="Random baseline replay" />
+    </div>
+    <div class="panel">
+      <h2>Dense Reward Policy</h2>
+      <p>Success rate: <strong>98.8%</strong><br />
+      Mean progress: <strong>99.8%</strong><br />
+      Disturbance recovery: <strong>100.0%</strong><br />
+      Tool calls: <strong>11.3</strong></p>
+      <img src="../replays/dense_trained.gif" alt="Dense trained replay" />
+    </div>
+  </section>
+
+  <h2>Training Curve</h2>
+  <img src="../plots/training_curve.png" alt="Training curve" />
+
+  <h2>Side-by-Side Replay</h2>
+  <img src="../replays/side_by_side_before_after.gif" alt="Side-by-side before and after replay" />
+
+  <h2>Tool-Call Trace Preview</h2>
+  <div class="panel">
+    <pre>{
+  &quot;action&quot;: null,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [],
+    &quot;expected_next&quot;: &quot;locate_items&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.0,
+    &quot;ticks&quot;: 0
+  },
+  &quot;rationale&quot;: &quot;Initial scene observation before any macro-action.&quot;,
+  &quot;reward&quot;: 0.0,
+  &quot;reward_components&quot;: {},
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;abb89e9941757bf1&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.102208+00:00&quot;,
+  &quot;tool_name&quot;: &quot;observe&quot;
+}
+
+{
+  &quot;action&quot;: &quot;inspect_scene&quot;,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [],
+    &quot;expected_next&quot;: &quot;locate_items&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.0,
+    &quot;ticks&quot;: 143
+  },
+  &quot;rationale&quot;: &quot;inspect_scene failed or was not applicable: not expected now.&quot;,
+  &quot;reward&quot;: -0.05,
+  &quot;reward_components&quot;: {
+    &quot;progress&quot;: 0.0,
+    &quot;success&quot;: 0.0
+  },
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;c420d91d7a0ba118&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.102314+00:00&quot;,
+  &quot;tool_name&quot;: &quot;execute_skill&quot;
+}
+
+{
+  &quot;action&quot;: &quot;replan&quot;,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [],
+    &quot;expected_next&quot;: &quot;locate_items&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.0,
+    &quot;ticks&quot;: 286
+  },
+  &quot;rationale&quot;: &quot;replan failed or was not applicable: not expected now.&quot;,
+  &quot;reward&quot;: -0.05,
+  &quot;reward_components&quot;: {
+    &quot;progress&quot;: 0.0,
+    &quot;success&quot;: 0.0
+  },
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;341cbb636e0493b7&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.110427+00:00&quot;,
+  &quot;tool_name&quot;: &quot;execute_skill&quot;
+}
+
+{
+  &quot;action&quot;: &quot;locate_items&quot;,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [
+      &quot;locate_items&quot;
+    ],
+    &quot;expected_next&quot;: &quot;clear_workspace&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.142857,
+    &quot;ticks&quot;: 429
+  },
+  &quot;rationale&quot;: &quot;locate_items advanced progress by 0.143.&quot;,
+  &quot;reward&quot;: 0.235714,
+  &quot;reward_components&quot;: {
+    &quot;progress&quot;: 0.214286,
+    &quot;success&quot;: 0.0
+  },
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;763ddbaf4b4711a8&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.118652+00:00&quot;,
+  &quot;tool_name&quot;: &quot;execute_skill&quot;
+}
+
+{
+  &quot;action&quot;: &quot;clear_workspace&quot;,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [
+      &quot;locate_items&quot;,
+      &quot;clear_workspace&quot;
+    ],
+    &quot;expected_next&quot;: &quot;pick_mug&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.285714,
+    &quot;ticks&quot;: 572
+  },
+  &quot;rationale&quot;: &quot;clear_workspace advanced progress by 0.143.&quot;,
+  &quot;reward&quot;: 0.257143,
+  &quot;reward_components&quot;: {
+    &quot;progress&quot;: 0.214286,
+    &quot;success&quot;: 0.0
+  },
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;fe7bf7f20b42c4f9&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.126947+00:00&quot;,
+  &quot;tool_name&quot;: &quot;execute_skill&quot;
+}
+
+{
+  &quot;action&quot;: &quot;pick_mug&quot;,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [
+      &quot;locate_items&quot;,
+      &quot;clear_workspace&quot;,
+      &quot;pick_mug&quot;
+    ],
+    &quot;expected_next&quot;: &quot;fill_drink&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.428571,
+    &quot;ticks&quot;: 715
+  },
+  &quot;rationale&quot;: &quot;pick_mug advanced progress by 0.143.&quot;,
+  &quot;reward&quot;: 0.278571,
+  &quot;reward_components&quot;: {
+    &quot;progress&quot;: 0.214286,
+    &quot;success&quot;: 0.0
+  },
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;28b6bd3ddc5be4e0&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.135251+00:00&quot;,
+  &quot;tool_name&quot;: &quot;execute_skill&quot;
+}
+
+{
+  &quot;action&quot;: &quot;fill_drink&quot;,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [
+      &quot;locate_items&quot;,
+      &quot;clear_workspace&quot;,
+      &quot;pick_mug&quot;,
+      &quot;fill_drink&quot;
+    ],
+    &quot;expected_next&quot;: &quot;place_snack&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.571429,
+    &quot;ticks&quot;: 858
+  },
+  &quot;rationale&quot;: &quot;fill_drink advanced progress by 0.143.&quot;,
+  &quot;reward&quot;: 0.300001,
+  &quot;reward_components&quot;: {
+    &quot;progress&quot;: 0.214287,
+    &quot;success&quot;: 0.0
+  },
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;272c3ab9e0ced806&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.143572+00:00&quot;,
+  &quot;tool_name&quot;: &quot;execute_skill&quot;
+}
+
+{
+  &quot;action&quot;: &quot;place_snack&quot;,
+  &quot;finished&quot;: false,
+  &quot;observation_summary&quot;: {
+    &quot;completed_subgoals&quot;: [
+      &quot;locate_items&quot;,
+      &quot;clear_workspace&quot;,
+      &quot;pick_mug&quot;,
+      &quot;fill_drink&quot;,
+      &quot;place_snack&quot;
+    ],
+    &quot;expected_next&quot;: &quot;recover_disturbance&quot;,
+    &quot;last_failure_reason&quot;: null,
+    &quot;progress_fraction&quot;: 0.714286,
+    &quot;ticks&quot;: 1001
+  },
+  &quot;rationale&quot;: &quot;place_snack advanced progress by 0.143.&quot;,
+  &quot;reward&quot;: 0.321428,
+  &quot;reward_components&quot;: {
+    &quot;progress&quot;: 0.214286,
+    &quot;success&quot;: 0.0
+  },
+  &quot;run_id&quot;: &quot;replay-501&quot;,
+  &quot;state_hash&quot;: &quot;998443790d5659f0&quot;,
+  &quot;task_id&quot;: &quot;breakfast-tray-501&quot;,
+  &quot;timestamp&quot;: &quot;2026-04-25T11:18:53.151836+00:00&quot;,
+  &quot;tool_name&quot;: &quot;execute_skill&quot;
+}</pre>
+  </div>
+
+  <h2>Leaderboard JSON</h2>
+  <div class="panel">
+    <pre>{
+  &quot;benchmark&quot;: &quot;RoboCerebra Reward Lab&quot;,
+  &quot;deterministic_smoke_test&quot;: {
+    &quot;dense_trained_policy&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        1.0,
+        1.0
+      ],
+      &quot;disturbance_recovery_rate&quot;: 1.0,
+      &quot;episodes&quot;: 60,
+      &quot;mean_progress&quot;: 1.0,
+      &quot;mean_reward&quot;: 3.3,
+      &quot;mean_ticks&quot;: 1287,
+      &quot;mean_tool_calls&quot;: 9,
+      &quot;success_rate&quot;: 1.0,
+      &quot;success_rate_ci95&quot;: [
+        1.0,
+        1.0
+      ],
+      &quot;task_regime&quot;: &quot;deterministic_smoke_test&quot;
+    },
+    &quot;random_baseline&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        0.0,
+        0.049061
+      ],
+      &quot;disturbance_recovery_rate&quot;: 0.016667,
+      &quot;episodes&quot;: 60,
+      &quot;mean_progress&quot;: 0.266667,
+      &quot;mean_reward&quot;: -0.328453,
+      &quot;mean_ticks&quot;: 2574,
+      &quot;mean_tool_calls&quot;: 18,
+      &quot;success_rate&quot;: 0.0,
+      &quot;success_rate_ci95&quot;: [
+        0.0,
+        0.0
+      ],
+      &quot;task_regime&quot;: &quot;deterministic_smoke_test&quot;
+    }
+  },
+  &quot;headline&quot;: {
+    &quot;progress_lift&quot;: 0.544643,
+    &quot;reward_auc_lift&quot;: 2.295714,
+    &quot;success_lift&quot;: 0.7125
+  },
+  &quot;randomized_heldout&quot;: {
+    &quot;dense_trained&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        1.0,
+        1.0
+      ],
+      &quot;disturbance_recovery_rate&quot;: 1.0,
+      &quot;episodes&quot;: 80,
+      &quot;mean_progress&quot;: 0.998214,
+      &quot;mean_reward&quot;: 3.164821,
+      &quot;mean_ticks&quot;: 2015.4875,
+      &quot;mean_tool_calls&quot;: 11.3125,
+      &quot;success_rate&quot;: 0.9875,
+      &quot;success_rate_ci95&quot;: [
+        0.963154,
+        1.0
+      ],
+      &quot;task_regime&quot;: &quot;randomized_heldout&quot;
+    },
+    &quot;expert_oracle&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        1.0,
+        1.0
+      ],
+      &quot;disturbance_recovery_rate&quot;: 1.0,
+      &quot;episodes&quot;: 80,
+      &quot;mean_progress&quot;: 1.0,
+      &quot;mean_reward&quot;: 3.22125,
+      &quot;mean_ticks&quot;: 1896.975,
+      &quot;mean_tool_calls&quot;: 10.575,
+      &quot;success_rate&quot;: 1.0,
+      &quot;success_rate_ci95&quot;: [
+        1.0,
+        1.0
+      ],
+      &quot;task_regime&quot;: &quot;randomized_heldout&quot;
+    },
+    &quot;fixed_script&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        0.0,
+        0.0
+      ],
+      &quot;disturbance_recovery_rate&quot;: 0.0,
+      &quot;episodes&quot;: 80,
+      &quot;mean_progress&quot;: 0.0,
+      &quot;mean_reward&quot;: -0.9,
+      &quot;mean_ticks&quot;: 3230.1,
+      &quot;mean_tool_calls&quot;: 18,
+      &quot;success_rate&quot;: 0.0,
+      &quot;success_rate_ci95&quot;: [
+        0.0,
+        0.0
+      ],
+      &quot;task_regime&quot;: &quot;randomized_heldout&quot;
+    },
+    &quot;random&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        0.0,
+        0.0
+      ],
+      &quot;disturbance_recovery_rate&quot;: 0.0,
+      &quot;episodes&quot;: 80,
+      &quot;mean_progress&quot;: 0.141071,
+      &quot;mean_reward&quot;: -0.605536,
+      &quot;mean_ticks&quot;: 3230.1,
+      &quot;mean_tool_calls&quot;: 18,
+      &quot;success_rate&quot;: 0.0,
+      &quot;success_rate_ci95&quot;: [
+        0.0,
+        0.0
+      ],
+      &quot;task_regime&quot;: &quot;randomized_heldout&quot;
+    },
+    &quot;reactive_script&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        0.177153,
+        0.372847
+      ],
+      &quot;disturbance_recovery_rate&quot;: 0.275,
+      &quot;episodes&quot;: 80,
+      &quot;mean_progress&quot;: 0.453571,
+      &quot;mean_reward&quot;: 0.639553,
+      &quot;mean_ticks&quot;: 2801.4125,
+      &quot;mean_tool_calls&quot;: 15.5875,
+      &quot;success_rate&quot;: 0.275,
+      &quot;success_rate_ci95&quot;: [
+        0.177153,
+        0.372847
+      ],
+      &quot;task_regime&quot;: &quot;randomized_heldout&quot;
+    },
+    &quot;sparse_trained&quot;: {
+      &quot;disturbance_recovery_ci95&quot;: [
+        0.0,
+        0.0
+      ],
+      &quot;disturbance_recovery_rate&quot;: 0.0,
+      &quot;episodes&quot;: 80,
+      &quot;mean_progress&quot;: 0.0,
+      &quot;mean_reward&quot;: -0.9,
+      &quot;mean_ticks&quot;: 3222,
+      &quot;mean_tool_calls&quot;: 18,
+      &quot;success_rate&quot;: 0.0,
+      &quot;success_rate_ci95&quot;: [
+        0.0,
+        0.0
+      ],
+      &quot;task_regime&quot;: &quot;randomized_heldout&quot;
+    }
+  },
+  &quot;result_type&quot;: &quot;randomized_heldout_benchmark&quot;,
+  &quot;sample_vlm_reward&quot;: {
+    &quot;confidence&quot;: 0.72,
+    &quot;irreversible_error&quot;: false,
+    &quot;progress_delta&quot;: 0.142857,
+    &quot;rationale&quot;: &quot;```json\n{\n  \&quot;progress_delta\&quot;: 0.142857,\n  \&quot;subgoal_complete\&quot;: false,\n  \&quot;irreversible_error\&quot;: false,\n  \&quot;confidence\&quot;: 1.0,\n  \&quot;rationale\&quot;: \&quot;The simulator reports a progress delta of 0.142857 for the &#x27;locate_items&#x27; action within the &#x27;locate_items&#x27; subgoal. This positive delta indicates partial progress,&quot;,
+    &quot;subgoal_complete&quot;: true
+  },
+  &quot;task&quot;: &quot;breakfast_tray_disturbance&quot;
+}</pre>
+  </div>
+</main>
+</body>
+</html>

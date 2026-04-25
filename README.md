@@ -27,6 +27,14 @@ The demo writes:
 - `artifacts/replays/baseline_random.gif`
 - `artifacts/replays/dense_trained.gif`
 
+Build a browser report from those artifacts:
+
+```bash
+.venv/bin/python scripts/build_visual_report.py
+.venv/bin/python scripts/build_side_by_side.py
+open artifacts/visual_report/index.html
+```
+
 Set `GEMINI_API_KEY` or `GOOGLE_API_KEY` to use Gemini for reward scoring. Without
 an API key, the project uses a deterministic symbolic fallback and records that in
 the reward rationale so the demo remains runnable.
@@ -40,6 +48,10 @@ Run a local OpenReward-compatible server:
 ```bash
 .venv/bin/python -m robocerebra_rl.env
 ```
+
+This is an API server, not a browser UI. See
+`docs/openreward_deploy.md` for the correct session-header flow and hosted
+OpenReward deployment commands.
 
 Core tools:
 
@@ -69,11 +81,14 @@ Each macro-action advances the simulator by enough internal ticks to produce a
 `scripts/run_demo.py` evaluates:
 
 - Random macro-action baseline.
-- Dense-reward tabular macro-policy.
+- Fixed-script and reactive-script baselines on randomized held-out scenes.
+- Sparse-trained and dense-reward tabular macro-policies.
 - Expert oracle ceiling.
 
 The leaderboard JSON reports success rate, mean progress, dense reward, mean
-ticks, disturbance recovery rate, and headline lift over the random baseline.
+ticks, disturbance recovery rate, confidence intervals, tool-call counts, and
+headline lift over the stronger reactive-script baseline. The old deterministic
+100% result is kept only under `deterministic_smoke_test`.
 
 ## Two-Minute Pitch
 
@@ -89,6 +104,10 @@ videos that show recovery from non-stationary disturbances.”
 Use Brev/Isaac only after the core metrics are generated. The safe stretch is a
 visual replay, not training. If Isaac setup takes more than 45 minutes, preserve
 the benchmark story and submit the OpenReward environment plus metrics.
+
+For the cloud visualization path and Isaac Sim core replay, see
+`docs/brev_visualization.md`. The Isaac script consumes the same JSONL traces
+used by the OpenReward evaluation so the 3D replay is tied to actual tool calls.
 
 ## Limitations
 

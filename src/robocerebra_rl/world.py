@@ -34,6 +34,41 @@ class TaskSpec:
 
 
 @dataclass(frozen=True)
+class SceneConfig:
+    mug_position: tuple[float, float, float] = (0.35, -0.2, 0.78)
+    snack_position: tuple[float, float, float] = (0.15, 0.3, 0.78)
+    tray_position: tuple[float, float, float] = (0.55, 0.0, 0.78)
+    disturbance_tick: int = 500
+    distractor_count: int = 0
+    action_failure_prob: float = 0.0
+    disturbance_severity: float = 0.3
+
+    @classmethod
+    def from_seed(cls, seed: int) -> "SceneConfig":
+        rng = random.Random(seed)
+        return cls(
+            mug_position=(round(rng.uniform(0.2, 0.45), 3), round(rng.uniform(-0.35, -0.05), 3), 0.78),
+            snack_position=(round(rng.uniform(0.05, 0.3), 3), round(rng.uniform(0.15, 0.4), 3), 0.78),
+            tray_position=(round(rng.uniform(0.45, 0.65), 3), round(rng.uniform(-0.1, 0.1), 3), 0.78),
+            disturbance_tick=rng.choice([350, 500, 650]),
+            distractor_count=rng.choice([0, 1, 2, 3]),
+            action_failure_prob=rng.choice([0.0, 0.05, 0.1]),
+            disturbance_severity=rng.choice([0.2, 0.4, 0.7]),
+        )
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "mug_position": self.mug_position,
+            "snack_position": self.snack_position,
+            "tray_position": self.tray_position,
+            "disturbance_tick": self.disturbance_tick,
+            "distractor_count": self.distractor_count,
+            "action_failure_prob": self.action_failure_prob,
+            "disturbance_severity": self.disturbance_severity,
+        }
+
+
+@dataclass(frozen=True)
 class Transition:
     action: str
     expected_action: str
@@ -54,6 +89,7 @@ class BreakfastTrayWorld:
     seed: int = 0
     horizon_ticks: int = 1000
     max_macro_steps: int = 18
+    scene: SceneConfig = field(default_factory=SceneConfig)
     task: TaskSpec = field(init=False)
     ticks: int = field(init=False, default=0)
     macro_steps: int = field(init=False, default=0)
@@ -61,6 +97,9 @@ class BreakfastTrayWorld:
     success: bool = field(init=False, default=False)
     done: bool = field(init=False, default=False)
     disturbance_recovered: bool = field(init=False, default=False)
+    inspected: bool = field(init=False, default=False)
+    replanned: bool = field(init=False, default=False)
+    last_failure_reason: str | None = field(init=False, default=None)
     action_history: list[str] = field(init=False, default_factory=list)
     _rng: random.Random = field(init=False, repr=False)
 
@@ -100,6 +139,9 @@ class BreakfastTrayWorld:
                 str(self.progress_index),
                 str(self.ticks),
                 str(self.disturbance_recovered),
+                str(self.inspected),
+                str(self.replanned),
+                str(self.scene.as_dict()),
                 ",".join(self.action_history[-5:]),
             ]
         )
@@ -119,6 +161,10 @@ class BreakfastTrayWorld:
             "expected_next": self.expected_action,
             "progress_fraction": self.progress_fraction,
             "disturbance_recovered": self.disturbance_recovered,
+            "inspected": self.inspected,
+            "replanned": self.replanned,
+            "last_failure_reason": self.last_failure_reason,
+            "scene": self.scene.as_dict(),
             "success": self.success,
             "done": self.done,
         }
@@ -132,16 +178,22 @@ class BreakfastTrayWorld:
         self.action_history.append(action)
         self.macro_steps += 1
         self.ticks += self.macro_tick_size
+        self.last_failure_reason = None
 
-        if action == expected:
+        if action == "inspect_scene":
+            self.inspected = True
+            progress_delta = 0.0
+            reward = -0.01
+        elif action == "replan":
+            self.replanned = True
+            progress_delta = 0.0
+            reward = -0.01
+        elif action == expected and self._action_can_progress(action):
             self.progress_index += 1
             if action == "recover_disturbance":
                 self.disturbance_recovered = True
             progress_delta = self.progress_fraction - before
             reward = 0.25 + progress_delta + (0.1 if self.disturbance_recovered else 0.0)
-        elif action in {"inspect_scene", "replan"}:
-            progress_delta = 0.0
-            reward = -0.01
         else:
             progress_delta = 0.0
             reward = -0.08
@@ -156,6 +208,22 @@ class BreakfastTrayWorld:
             reward -= 0.25
 
         return self._transition(action, expected, progress_delta, reward)
+
+    def _action_can_progress(self, action: str) -> bool:
+        if action == "locate_items" and self.scene.distractor_count > 0 and not self.inspected:
+            self.last_failure_reason = "needs_inspection"
+            return False
+        if (
+            action == "recover_disturbance"
+            and self.scene.disturbance_severity >= 0.5
+            and not self.replanned
+        ):
+            self.last_failure_reason = "needs_replan"
+            return False
+        if self.scene.action_failure_prob > 0 and self._rng.random() < self.scene.action_failure_prob:
+            self.last_failure_reason = "stochastic_action_failure"
+            return False
+        return True
 
     def _transition(
         self, action: str, expected_action: str, progress_delta: float, reward: float
@@ -180,9 +248,34 @@ class BreakfastTrayWorld:
 def iter_policy_actions(policy: str | Iterable[str] | object, world: BreakfastTrayWorld) -> str:
     if isinstance(policy, str):
         if policy == "expert":
+            if (
+                world.expected_action == "locate_items"
+                and world.scene.distractor_count > 0
+                and not world.inspected
+            ):
+                return "inspect_scene"
+            if (
+                world.expected_action == "recover_disturbance"
+                and world.scene.disturbance_severity >= 0.5
+                and not world.replanned
+            ):
+                return "replan"
             return world.expected_action
         if policy == "random":
             return world._rng.choice(ACTIONS)
+        if policy == "fixed_script":
+            index = min(world.macro_steps, len(SUBGOALS) - 1)
+            return SUBGOALS[index]
+        if policy == "reactive_script":
+            sequence: list[str] = []
+            if world.scene.distractor_count > 0:
+                sequence.append("inspect_scene")
+            for subgoal in SUBGOALS:
+                if subgoal == "recover_disturbance" and world.scene.disturbance_severity >= 0.5:
+                    sequence.append("replan")
+                sequence.append(subgoal)
+            index = min(world.macro_steps, len(sequence) - 1)
+            return sequence[index]
         if policy in ACTIONS:
             return policy
         raise ValueError(f"Unknown policy string: {policy}")

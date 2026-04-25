@@ -1,40 +1,164 @@
 {
   "benchmark": "RoboCerebra Reward Lab",
-  "dense_trained_policy": {
-    "disturbance_recovery_rate": 1.0,
-    "episodes": 60,
-    "mean_progress": 1.0,
-    "mean_reward": 3.4,
-    "mean_ticks": 1001,
-    "success_rate": 1.0
-  },
-  "expert_oracle": {
-    "disturbance_recovery_rate": 1.0,
-    "episodes": 10,
-    "mean_progress": 1.0,
-    "mean_reward": 3.4,
-    "mean_ticks": 1001,
-    "success_rate": 1.0
+  "deterministic_smoke_test": {
+    "dense_trained_policy": {
+      "disturbance_recovery_ci95": [
+        1.0,
+        1.0
+      ],
+      "disturbance_recovery_rate": 1.0,
+      "episodes": 60,
+      "mean_progress": 1.0,
+      "mean_reward": 3.3,
+      "mean_ticks": 1287,
+      "mean_tool_calls": 9,
+      "success_rate": 1.0,
+      "success_rate_ci95": [
+        1.0,
+        1.0
+      ],
+      "task_regime": "deterministic_smoke_test"
+    },
+    "random_baseline": {
+      "disturbance_recovery_ci95": [
+        0.0,
+        0.049061
+      ],
+      "disturbance_recovery_rate": 0.016667,
+      "episodes": 60,
+      "mean_progress": 0.266667,
+      "mean_reward": -0.328453,
+      "mean_ticks": 2574,
+      "mean_tool_calls": 18,
+      "success_rate": 0.0,
+      "success_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "task_regime": "deterministic_smoke_test"
+    }
   },
   "headline": {
-    "progress_lift": 0.733333,
-    "reward_auc_lift": 2.452143,
-    "success_lift": 1.0
+    "progress_lift": 0.544643,
+    "reward_auc_lift": 2.295714,
+    "success_lift": 0.7125
   },
-  "horizon_ticks": 1000,
-  "random_baseline": {
-    "disturbance_recovery_rate": 0.016667,
-    "episodes": 60,
-    "mean_progress": 0.266667,
-    "mean_reward": -0.328453,
-    "mean_ticks": 2574,
-    "success_rate": 0.0
+  "randomized_heldout": {
+    "dense_trained": {
+      "disturbance_recovery_ci95": [
+        1.0,
+        1.0
+      ],
+      "disturbance_recovery_rate": 1.0,
+      "episodes": 80,
+      "mean_progress": 0.998214,
+      "mean_reward": 3.164821,
+      "mean_ticks": 2015.4875,
+      "mean_tool_calls": 11.3125,
+      "success_rate": 0.9875,
+      "success_rate_ci95": [
+        0.963154,
+        1.0
+      ],
+      "task_regime": "randomized_heldout"
+    },
+    "expert_oracle": {
+      "disturbance_recovery_ci95": [
+        1.0,
+        1.0
+      ],
+      "disturbance_recovery_rate": 1.0,
+      "episodes": 80,
+      "mean_progress": 1.0,
+      "mean_reward": 3.22125,
+      "mean_ticks": 1896.975,
+      "mean_tool_calls": 10.575,
+      "success_rate": 1.0,
+      "success_rate_ci95": [
+        1.0,
+        1.0
+      ],
+      "task_regime": "randomized_heldout"
+    },
+    "fixed_script": {
+      "disturbance_recovery_ci95": [
+        0.0,
+        0.0
+      ],
+      "disturbance_recovery_rate": 0.0,
+      "episodes": 80,
+      "mean_progress": 0.0,
+      "mean_reward": -0.9,
+      "mean_ticks": 3230.1,
+      "mean_tool_calls": 18,
+      "success_rate": 0.0,
+      "success_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "task_regime": "randomized_heldout"
+    },
+    "random": {
+      "disturbance_recovery_ci95": [
+        0.0,
+        0.0
+      ],
+      "disturbance_recovery_rate": 0.0,
+      "episodes": 80,
+      "mean_progress": 0.141071,
+      "mean_reward": -0.605536,
+      "mean_ticks": 3230.1,
+      "mean_tool_calls": 18,
+      "success_rate": 0.0,
+      "success_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "task_regime": "randomized_heldout"
+    },
+    "reactive_script": {
+      "disturbance_recovery_ci95": [
+        0.177153,
+        0.372847
+      ],
+      "disturbance_recovery_rate": 0.275,
+      "episodes": 80,
+      "mean_progress": 0.453571,
+      "mean_reward": 0.639553,
+      "mean_ticks": 2801.4125,
+      "mean_tool_calls": 15.5875,
+      "success_rate": 0.275,
+      "success_rate_ci95": [
+        0.177153,
+        0.372847
+      ],
+      "task_regime": "randomized_heldout"
+    },
+    "sparse_trained": {
+      "disturbance_recovery_ci95": [
+        0.0,
+        0.0
+      ],
+      "disturbance_recovery_rate": 0.0,
+      "episodes": 80,
+      "mean_progress": 0.0,
+      "mean_reward": -0.9,
+      "mean_ticks": 3222,
+      "mean_tool_calls": 18,
+      "success_rate": 0.0,
+      "success_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "task_regime": "randomized_heldout"
+    }
   },
+  "result_type": "randomized_heldout_benchmark",
   "sample_vlm_reward": {
     "confidence": 0.72,
     "irreversible_error": false,
     "progress_delta": 0.142857,
-    "rationale": "Cached symbolic fallback: progress is inferred from the simulator state because GEMINI_API_KEY is not configured.",
+    "rationale": "```json\n{\n  \"progress_delta\": 0.142857,\n  \"subgoal_complete\": false,\n  \"irreversible_error\": false,\n  \"confidence\": 1.0,\n  \"rationale\": \"The simulator reports a progress delta of 0.142857 for the 'locate_items' action within the 'locate_items' subgoal. This positive delta indicates partial progress,",
     "subgoal_complete": true
   },
   "task": "breakfast_tray_disturbance"
