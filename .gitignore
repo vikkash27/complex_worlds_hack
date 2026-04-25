@@ -4,4 +4,7 @@ __pycache__/
 .pytest_cache/
 .openreward/
 *.egg-info/
-.env
+.superpowers/
+node_modules/
+dashboard/dist/
+dashboard/node_modules/
